@@ -1,0 +1,477 @@
+<?xml verson="1.0" encoding="UTF-8"?>
+<!-- Copyright 2014 Eric Smith -->
+
+<program>
+  <object_table_data_segment name="object_table_directory" phys_addr="0">  <!-- phys_addr is of 8-byte segment prefix -->
+    <object_table_header/>
+    <storage_descriptor segment="processor_object_table"/>    <!-- must be index 1 -->
+    <storage_descriptor segment="object_table_directory"/>    <!-- must be index 2 -->
+    <storage_descriptor segment="processor_1_object_table"/>
+    <storage_descriptor segment="system_object_table"/>
+    <storage_descriptor segment="process_1_object_table"/>
+    <storage_descriptor segment="null_program_object_table"/>
+    <storage_descriptor segment="program_1_object_table"/>
+    <storage_descriptor segment="dynamic_object_table"/>
+  </object_table_data_segment>
+
+  <object_table_data_segment name="processor_table">
+    <object_table_header/>
+    <storage_descriptor segment="processor_1_processor_access_segment"/>
+  </object_table_data_segment>
+
+  <object_table_data_segment name="processor_1_object_table">
+    <object_table_header/>
+    <storage_descriptor segment="processor_1_processor_data_segment"/>
+    <storage_descriptor segment="processor_1_local_communication_data_segment"/>
+    <storage_descriptor segment="processor_1_normal_port_processor_carrier_access_segment"/>
+    <storage_descriptor segment="processor_1_normal_port_processor_carrier_data_segment"/>
+    <storage_descriptor segment="processor_1_alarm_port_processor_carrier_access_segment"/>
+    <storage_descriptor segment="processor_1_alarm_port_processor_carrier_data_segment"/>
+    <storage_descriptor segment="processor_1_reconfiguration_port_processor_carrier_access_segment"/>
+    <storage_descriptor segment="processor_l_reconfiguration_port_processor_carrier_data_segment"/>
+    <storage_descriptor segment="processor_1_diagnostic_port_processor_carrier_access_segment"/>
+    <storage_descriptor segment="processor_1_diagnostic_port_processor_carrier_data_segment"/>
+  </object_table_data_segment>
+
+  <object_table_data_segment name="dispatch_port_object_table">
+    <object_table_header/>
+    <storage_descriptor segment="normal_dispatch_port_access_segment"/>
+    <storage_descriptor segment="normal_dispatch_port_data_segment"/>
+    <storage_descriptor segment="alarm_dispatch_port_access_segment"/>
+    <storage_descriptor segment="alarm_dispatch_port_data_segment"/>
+    <storage_descriptor segment="reconfiguration_dispatch_port_access_segment"/>
+    <storage_descriptor segment="reconfiguration_dispatch_port_data_segment"/>
+    <storage_descriptor segment="diagnostic_dispatch_port_access_segment"/>
+    <storage_descriptor segment="diagnostic_dispatch_port_data_segment"/>
+  </object_table_data_segment>
+
+  <object_table_data_segment name="system_object_table">
+    <object_table_header/>
+    <storage_descriptor segment="global_sro_access_segment"/>
+    <storage_descriptor segment="global_sro_data_segment"/>
+    <storage_descriptor segment="global_communication_data_segment"/>
+    <interconnect_descriptor segment="uart_segment"/>
+
+    <storage_descriptor segment="delay_port_access_segment"/>
+    <storage_descriptor segment="delay_port_data_segment"/>
+    <storage_descriptor segment="scheduling_port_access_segment"/>
+    <storage_descriptor segment="scheduling_port_data_segment"/>
+    <storage_descriptor segment="fault_port_access_segment"/>
+    <storage_descriptor segment="fault_port_data_segment"/>
+
+    <!-- It is unclear from the GDP ARM what the maintenance port is
+         used for. -->
+    <storage_descriptor segment="maintenance_port_access_segment"/>
+    <storage_descriptor segment="maintenance_port_data_segment"/>
+  </object_table_data_segment>
+
+  <object_table_data_segment name="process_1_object_table">
+    <object_table_header/>
+    <storage_descriptor segment="process_1_process_access_segment"/>
+    <storage_descriptor segment="process_1_process_data_segment"/>
+    <storage_descriptor segment="process_1_process_carrier_access_segment"/>
+    <storage_descriptor segment="process_1_process_carrier_data_segment"/>
+    <storage_descriptor segment="process_1_global_access_segment"/>
+    <storage_descriptor segment="process_1_root_context_access_segment"/>
+    <storage_descriptor segment="process_1_root_context_data_segment"/>
+    <storage_descriptor segment="process_1_root_operand_stack_data_segment"/>
+  </object_table_data_segment>
+
+  <object_table_data_segment name="null_program_object_table">
+    <object_table_header/>
+    <storage_descriptor segment="null_program_domain_access_segment"/>
+    <storage_descriptor segment="null_program_constants_data_segment"/>
+    <storage_descriptor segment="null_program_instruction_data_segment"/>
+  </object_table_data_segment>
+
+  <object_table_data_segment name="program_1_object_table">
+    <object_table_header/>
+    <storage_descriptor segment="program_1_root_domain_access_segment"/>
+    <storage_descriptor segment="program_1_root_constants_data_segment"/>
+    <storage_descriptor segment="program_1_root_instruction_data_segment"/>
+  </object_table_data_segment>
+
+  <object_table_data_segment name="dynamic_object_table" size="8192">
+    <object_table_header/>
+  </object_table_data_segment>
+
+  <storage_resource_data_segment name="global_sro_data_segment">
+    <field name="beginning_block_index" value="1"/>
+    <field name="current_block_index" value="1"/>
+    <field name="storage_block_descriptor_area">
+      <storage_block_descriptor>
+	<field name="base_address" value="0x008000"/>  <!-- XXX assume under 32 KiB of static objects -->
+	<field name="end_address"  value="0x010000"/>  <!-- allow for 32 KiB of dynamic objects -->
+	<field name="last_block"   value="true"/>
+	<field name="dirty"        value="false"/>     <!-- XXX assume memory was initialized to zero -->
+      </storage_block_descriptor>
+    </field>
+  </storage_resource_data_segment>
+
+  <storage_resource_access_segment name="global_sro_access_segment">
+    <ad_slot name="storage_resource_data_segment" value="global_sro_data_segment"/>
+    <ad_slot name="object_table_data_segment"     value="dynamic_object_table"/>
+  </storage_resource_access_segment>
+
+  <communication_data_segment name="global_communication_data_segment">
+    <field name="processor_count" value="1"/>
+  </communication_data_segment>
+
+  <port_data_segment name="normal_dispatch_port_data_segment">
+    <field name="head_free_buffer" value="24"/>
+    <field name="head_message_in_buffer" value="16"/>
+    <field name="tail_message_in_buffer" value="16"/>
+    <field name="port_message_queue">
+      <!-- in use -->
+      <port_message_queue_entry next_entry_displacement="0"/>
+      <!-- free list -->
+      <port_message_queue_entry next_entry_displacement="32"/>
+      <port_message_queue_entry next_entry_displacement="40"/>
+      <port_message_queue_entry next_entry_displacement="48"/>
+      <port_message_queue_entry next_entry_displacement="56"/>
+      <port_message_queue_entry next_entry_displacement="0"/>
+    </field>
+  </port_data_segment>
+
+  <port_access_segment name="normal_dispatch_port_access_segment" size="64">
+    <ad_slot name="port_data_segment" value="normal_dispatch_port_data_segment"/>
+    <ad_slot index="4" value="process_1_process_access_segment"/>
+  </port_access_segment>
+
+  <port_data_segment name="alarm_dispatch_port_data_segment">
+    <field name="head_free_buffer" value="16"/>
+    <field name="head_message_in_buffer" value="0"/>
+    <field name="tail_message_in_buffer" value="0"/>
+    <field name="port_message_queue">
+      <!-- free list -->
+      <port_message_queue_entry next_entry_displacement="24"/>
+      <port_message_queue_entry next_entry_displacement="32"/>
+      <port_message_queue_entry next_entry_displacement="40"/>
+      <port_message_queue_entry next_entry_displacement="48"/>
+      <port_message_queue_entry next_entry_displacement="56"/>
+      <port_message_queue_entry next_entry_displacement="0"/>
+    </field>
+  </port_data_segment>
+
+  <port_access_segment name="alarm_dispatch_port_access_segment" size="64">
+    <ad_slot name="port_data_segment" value="alarm_dispatch_port_data_segment"/>
+  </port_access_segment>
+
+  <port_data_segment name="reconfiguration_dispatch_port_data_segment">
+    <field name="head_free_buffer" value="16"/>
+    <field name="head_message_in_buffer" value="0"/>
+    <field name="tail_message_in_buffer" value="0"/>
+    <field name="port_message_queue">
+      <!-- free list -->
+      <port_message_queue_entry next_entry_displacement="24"/>
+      <port_message_queue_entry next_entry_displacement="32"/>
+      <port_message_queue_entry next_entry_displacement="40"/>
+      <port_message_queue_entry next_entry_displacement="48"/>
+      <port_message_queue_entry next_entry_displacement="56"/>
+      <port_message_queue_entry next_entry_displacement="0"/>
+    </field>
+  </port_data_segment>
+
+  <port_access_segment name="reconfiguration_dispatch_port_access_segment" size="64">
+    <ad_slot name="port_data_segment" value="reconfiguration_dispatch_port_data_segment"/>
+  </port_access_segment>
+
+  <port_data_segment name="diagnostic_dispatch_port_data_segment">
+    <field name="head_free_buffer" value="16"/>
+    <field name="head_message_in_buffer" value="0"/>
+    <field name="tail_message_in_buffer" value="0"/>
+    <field name="port_message_queue">
+      <!-- free list -->
+      <port_message_queue_entry next_entry_displacement="24"/>
+      <port_message_queue_entry next_entry_displacement="32"/>
+      <port_message_queue_entry next_entry_displacement="40"/>
+      <port_message_queue_entry next_entry_displacement="48"/>
+      <port_message_queue_entry next_entry_displacement="56"/>
+      <port_message_queue_entry next_entry_displacement="0"/>
+    </field>
+  </port_data_segment>
+
+  <port_access_segment name="diagnostic_dispatch_port_access_segment" size="64">
+    <ad_slot name="port_data_segment" value="diagnostic_dispatch_port_data_segment"/>
+  </port_access_segment>
+
+  <communication_data_segment name="processor_1_local_communication_data_segment">
+    <field name="processor_count" value="1"/>
+    <field name="processor_id"    value="1"/>
+  </communication_data_segment>
+
+  <processor_data_segment name="processor_1_processor_data_segment">
+  </processor_data_segment>
+
+  <processor_access_segment name="processor_1_processor_access_segment">
+    <ad_slot name="processor_data_segment"       value="processor_1_data_segment"/>
+    <ad_slot name="current_process_carrier"      value="0"/> <!-- no current process -->
+    <ad_slot name="local_communication_segment"  value="processor_1_local_communication_data_segment"/>
+    <ad_slot name="global_communication_segment" value="global_communication_data_segment"/>
+    <ad_slot name="object_table_directory"       value="object_table_directory"/>
+    <ad_slot name="processor_carrier"            value="processor_1_normal_port_processor_carrier_access_segment"/>
+    <ad_slot name="delay_port"                   value="delay_port_access_segment"/>
+    <ad_slot name="delay_carrier"                value="delay_carrier_access_segment"/> <!-- XXX unclear how delay_carrier is used -->
+    <ad_slot name="normal_port"                  value="normal_dispatch_port_access_segment"/>
+    <ad_slot name="normal_port_carrier"          value="processor_1_normal_port_processor_carrier_access_segment"/>
+    <ad_slot name="alarm_port"                   value="alarm_dispatch_port_access_segment"/>
+    <ad_slot name="alarm_port_carrier"           value="processor_1_alarm_port_processor_carrier_access_segment"/>
+    <ad_slot name="reconfiguration_port"         value="reconfiguration_dispatch_port_access_segment"/>
+    <ad_slot name="reconfiguration_port_carrier" value="processor_1_reconfiguratoion_port_processor_carrier_access_segment"/>
+    <ad_slot name="diagnostic_port"              value="diagnostic_dispatch_port_access_segment"/>
+    <ad_slot name="diagnostic_port_carrier"      value="processor_1_reconfiguratoion_port_processor_carrier_access_segment"/>
+  </processor_access_segment>
+
+  <carrier_data_segment name="processor_1_normal_port_processor_carrier_data_segment">
+    <field name="carrier_status">
+      <field name="carried_object_type" value="processor"/>
+    </field>
+  </carrier_data_segment>
+
+  <carrier_access_segment name="processor_1_normal_port_processor_carrier_access_segment">
+    <ad_slot name="carrier_data_segment" value="processor_1_normal_port_processor_carrier_data_segment"/>
+    <ad_slot name="carried_object"       value="processor_1_processor_access_segment"/>
+  </carrier_access_segment>
+
+  <carrier_data_segment name="processor_1_alarm_port_processor_carrier_data_segment">
+    <field name="carrier_status">
+      <field name="carried_object_type" value="processor"/>
+    </field>
+  </carrier_data_segment>
+
+  <carrier_access_segment name="processor_1_alarm_port_processor_carrier_access_segment">
+    <ad_slot name="carrier_data_segment" value="processor_1_alarm_port_processor_carrier_data_segment"/>
+    <ad_slot name="carried_object"       value="processor_1_processor_access_segment"/>
+  </carrier_access_segment>
+
+  <carrier_data_segment name="processor_1_diagnostic_port_processor_carrier_data_segment">
+    <field name="carrier_status">
+      <field name="carried_object_type" value="processor"/>
+    </field>
+  </carrier_data_segment>
+
+  <carrier_access_segment name="processor_1_diagnostic_port_processor_carrier_access_segment">
+    <ad_slot name="carrier_data_segment" value="processor_1_diagnostic_port_processor_carrier_data_segment"/>
+    <ad_slot name="carried_object"       value="processor_1_processor_access_segment"/>
+  </carrier_access_segment>
+
+  <carrier_data_segment name="processor_1_diagnostic_port_processor_carrier_data_segment">
+    <field name="carrier_status">
+      <field name="carried_object_type" value="processor"/>
+    </field>
+  </carrier_data_segment>
+
+  <carrier_access_segment name="processor_1_reconfiguration_port_processor_carrier_access_segment">
+    <ad_slot name="carrier_data_segment" value="processor_1_reconfiguration_port_processor_carrier_data_segment"/>
+    <ad_slot name="carried_object"       value="processor_1_processor_access_segment"/>
+  </carrier_access_segment>
+
+  <interconnect_segment name="uart_segment">
+  </interconnect_segment>
+
+  <process_data_segment name="process_1_process_data_segment">
+  </process_data_segment>
+
+  <process_access_segment name="process_1_process_access_segment">
+    <ad_slot name="process_data_segment" value="process_1_data_segment"/>
+    <ad_slot name="current_context" value="process_1_root_context_access_segment"/>
+    <ad_slot name="global_access_segment" value="process_1_global_access_segment"/>
+    <ad_slot name="local_object_table" value="process_1_object_table"/>
+    <ad_slot name="process_carrier" value=""process_1_process_carrier_access_segment"
+    <ad_slot name="dispatching_port" value="normal_dispatch_port_access_segment"/>
+
+    <ad_slot name="scheduling_port" value="scheduling_port_access_segment"/>
+    <!-- XXX There isn't currently anything to receive from the
+         scheduling port. Ideally there would be a scheduling process
+         that receives a process from that port, and sets the period
+         count back to a large number, and sends it back to the
+         scheduling port. The scheduling process should reset its own
+         period count every time it does that. -->
+
+    <ad_slot name="fault_port" value="fault_port_access_segment"/>
+    <!-- XXX we don't have anything to receive from the fault port,
+         but if the process faults we want it sent there anyhow, for
+         post-mortem analysis of a memory dump -->
+
+  </process_access_segment>
+
+  <carrier_data_segment name="process_1_process_carrier_data_segment">
+  </carrier_data_segment>
+
+  <carrier_access_segment name="process_1_process_carrier_access_segment">
+    <ad_slot name="carrier_data_segment" value="process_1_process_carrier_data_segment"/>
+  </carrier_access_segment>
+
+  <generic_data_segment name="process_1_root_operand_stack_data_segment" size="8192">
+  </generic_data_segment>
+
+  <generic_data_segment name="process_1_root_constants_data_segment">
+    <field name="uart_object_selector" type="object_selector" value="uart_segment"/>
+    <field name="uart_data_register_displacement" type="ordinal" value="0"/>
+    <field name="uart_control_status_register_displacement" type="ordinal" value="1"/>
+    <field name="uart_tx_ready_mask" type="character" value="0x01"/>
+    <field name="uart_reset_byte" type="character" value="0x40"/>
+    <field name="uart_mode_byte" type="character" value="0x4e"/> <!-- async, 16x clock, 8N1 -->
+    <field name="uart_command_byte" type="character" value="0x27"/> <!-- RTS, error reaset, RxEN, DTR, TxEN -->
+    <field name="first" type="short_ordinal" value="0x41"/>
+    <field name="last"  type="short_ordinal" value="0x5a"/>
+  </generic_data_segment>
+
+  <access_segment name="process_1_global_access_segment">
+  </access_segment>
+
+  <context_data_segment name="process_1_root_context_data_segment">
+    <field name="c" type="short_ordinal"/>
+  </context_data_segment>
+
+  <context_access_segment name="process_1_root_context_access_segment">
+    <field name="context_data_segment"   value="process_1_root_context_data_segment"/>
+    <field name="constants_data_segment" value="process_1_root_constants_data_segment"/>
+    <!-- don't need previous context, not going to return -->
+    <field name="current_context"        value="process_1_root_context_access_segment"/>
+  </context_access_segment>
+
+  <instruction_data_segment name="null_program_instruction_data_segment">
+    <field name="context_access_segment_length" value="12"/>
+    <field name="context_data_segment_length" value="8"/>
+    <field name="operand_stack_segment_length" value="32"/>
+    <field name="initial_instruction_displacement" value="start"/>
+    <field name="data_constants_segment_index" value="1"/>
+    <field name="instructions">
+      <label name="start"/>
+      <instruction op="branch" format="">
+	<bref>start</bref>
+      </instruction>
+    </field>
+  </instruction_data_segment>
+
+  <domain_access_segment name="null_program_domain_access_segment">
+    <ad_slot index="0" value="null_program_instruction_data_segment"/>
+  </domain_access_segment>
+
+  <instruction_data_segment name="program_1_root_instruction_data_segment">
+    <field name="context_access_segment_length" value="12"/>
+    <field name="context_data_segment_length" value="8"/>
+    <field name="operand_stack_segment_length" value="32"/>
+    <field name="initial_instruction_displacement" value="init"/>
+    <field name="data_constants_segment_index" value="1"/>
+    <field name="instructions">
+      <label name="init"/>
+
+      <instruction op="move_character" format="ref1,stk">
+	<ref>first</ref>
+	<ref>uart_reset_byte</ref>
+      </instruction>
+
+      <instruction op="convert_character_to_short_ordinal" format="ref1,stk">
+	<ref>c</ref>
+      </instruction>
+
+      <instruction op="move_to_interconnect" format="ref1,ref2,stk">
+	<ref>uart_object_selector</ref>
+	<ref>uart_data_register_displacement</ref>
+      </instruction>
+
+      <instruction op="move_character" format="ref1,stk">
+	<ref>first</ref>
+	<ref>uart_mode_byte</ref>
+      </instruction>
+
+      <instruction op="convert_character_to_short_ordinal" format="ref1,stk">
+	<ref>c</ref>
+      </instruction>
+
+      <instruction op="move_to_interconnect" format="ref1,ref2,stk">
+	<ref>uart_object_selector</ref>
+	<ref>uart_data_register_displacement</ref>
+      </instruction>
+
+      <instruction op="move_character" format="ref1,stk">
+	<ref>first</ref>
+	<ref>uart_command_byte</ref>
+      </instruction>
+
+      <instruction op="convert_character_to_short_ordinal" format="ref1,stk">
+	<ref>c</ref>
+      </instruction>
+
+      <instruction op="move_to_interconnect" format="ref1,ref2,stk">
+	<ref>uart_object_selector</ref>
+	<ref>uart_data_register_displacement</ref>
+      </instruction>
+
+      <label name="start"/>
+
+      <instruction op="move_character" format="ref1,ref2">
+	<ref>first</ref>
+	<ref>c</ref>
+      </instruction>
+
+      <label name="loop"/>
+
+      <instruction op="move_from_interconnect" format="ref1,ref2,stk">
+	<ref>uart_object_selector</ref>
+	<ref>uart_control_status_register_displacement</ref>
+      </instruction>
+
+      <instruction op="convert_short_ordinal_to_character" format="stk,stk">
+      </instruction>
+
+      <instruction op="and_character" format="stk,ref1,stk">
+	<ref>uart_tx_ready_mask</ref>
+      </instruction>
+
+      <instruction op="branch_false" format="br">
+	<bref>loop</bref>
+      </instruction>
+
+      <instruction op="convert_character_to_short_ordinal" format="ref1,stk">
+	<ref>c</ref>
+      </instruction>
+
+      <instruction op="move_to_interconnect" format="ref1,ref2,stk">
+	<ref>uart_object_selector</ref>
+	<ref>uart_data_register_displacement</ref>
+      </instruction>
+
+      <instruction op="increment_character" format="ref1">
+	<ref>c</ref>
+      </instruction>
+
+      <instruction op="greater_than_character_character" format="ref1,ref2,stk">
+	<ref>c</ref>
+	<ref>last</ref>
+      </instruction>
+
+      <instruction op="branch_false" format="stk,br">
+	<bref>loop</bref>
+      </instruction>
+
+      <instruction op="branch" format="br">
+	<bref>start</bref>
+      </instruction>
+    </field>
+  </instruction_data_segment>
+
+  <instruction_data_segment name="program_1_root_instruction_data_segment">
+    <field name="context_access_segment_length" value="12"/>
+    <field name="context_data_segment_length" value="8"/>
+    <field name="operand_stack_segment_length" value="32"/>
+    <field name="initial_instruction_displacement" value="init"/>
+    <field name="data_constants_segment_index" value="1"/>
+    <field name="instructions">
+      <label name="init"/>
+      <!-- No actual fault handling. Loop doing nothing, to preserve state
+           for post-mortem analysis. -->
+      <instruction op="branch" format="br">
+	<bref>init</bref>
+      </instruction>
+    </field>
+  </instruction_data_segment>
+
+  <domain_access_segment name="domain_access_segment">
+    <ad_slot index="0" value="program_1_root_instruction_data_segment"/>
+    <ad_slot index="1" value="program_1_root_fault_instruction_data_segment"/>
+  </domain_access_segment>
+
+</program>
