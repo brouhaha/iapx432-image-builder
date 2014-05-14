@@ -1,0 +1,269 @@
+<?xml verson="1.0" encoding="UTF-8"?>
+<!-- Copyright 2014 Eric Smith -->
+
+<definitions>
+<!-- operand lengths:
+        b:  byte           (8 bits)
+        db: double-byte   (16 bits)
+        w:  word          (32 bits)
+        dw: double-word   (64 bits)
+        ew: extended-word (80 bits)
+        br: branch reference (10 or 16 bits)
+  -->
+
+<!-- class encoding from page 11-2 -->
+<enumeration name="instruction_class" size="var">
+  <constant operands=""         encoding="0b000110"/>
+  <constant operands="br"       encoding="0b100110"/>
+  <constant operands="breakpt"  encoding="0b111111"/>
+  <constant operands="b,br"       encoding="0b1000"/>
+  <constant operands="b"        encoding="0b010110"/>
+  <constant operands="db"         encoding="0b0000"/>
+  <constant operands="w"        encoding="0b110110"/>
+  <constant operands="dw"       encoding="0b001110"/>
+  <constant operands="ew"       encoding="0b101110"/>
+
+  <constant operands="b,b"      encoding="0b011110"/>
+  <constant operands="b,db"     encoding="0b111110"/>
+  <constant operands="b,w"      encoding="0b000001"/>
+  <constant operands="db,b"     encoding="0b100001"/>
+  <constant operands="db,db"      encoding="0b0100"/>
+  <constant operands="db,w"     encoding="0b010001"/>
+  <constant operands="w,b"      encoding="0b001001"/>
+  <constant operands="w,db"     encoding="0b101001"/>
+  <constant operands="w,w"        encoding="0b1100"/>
+  <constant operands="w,ew"     encoding="0b011001"/>
+  <constant operands="dw,b"     encoding="0b111001"/>
+  <constant operands="dw,dw"    encoding="0b000101"/>
+  <constant operands="dw,ew"    encoding="0b100101"/>
+  <constant operands="ew,b"     encoding="0b010101"/>
+  <constant operands="ew,w"     encoding="0b110101"/>
+  <constant operands="ew,dw"    encoding="0b001101"/>
+  <constant operands="ew,ew"    encoding="0b101101"/>
+  <constant operands="b,b,b"    encoding="0b011101"/>
+  <constant operands="db,db,b"  encoding="0b111101"/>
+  <constant operands="db,db,db"   encoding="0b0010"/>
+  <constant operands="db,db,w"  encoding="0b000011"/>
+  <constant operands="db,w,w"   encoding="0b100011"/>
+  <constant operands="db,w,dw"  encoding="0b010011"/>
+  <constant operands="w,db,dw"  encoding="0b110011"/>
+  <constant operands="w,w,b"    encoding="0b001011"/>
+  <constant operands="w,w,db"   encoding="0b110001"/>
+  <constant operands="w,w,w"      encoding="0b1010"/>
+  <constant operands="w,w,ew"   encoding="0b101011"/>
+  <constant operands="w,ew,ew"  encoding="0b011011"/>
+  <constant operands="dw,w,w"   encoding="0b111011"/>
+  <constant operands="dw,dw,b"  encoding="0b000111"/>
+  <constant operands="dw,dw,ew" encoding="0b100111"/>
+  <constant operands="dw,ew,ew" encoding="0b010111"/>
+  <constant operands="ew,w,ew"  encoding="0b110111"/>
+  <constant operands="ew,dw,ew" encoding="0b001111"/>
+  <constant operands="ew,ew,b"  encoding="0b101111"/>
+  <constant operands="ew,ew,ew" encoding="0b011111"/>
+</enumeration>
+
+<!-- format encoding from page 11-3 -->
+<enumeration name="instruction_format" size="var">
+  <constant operands="dref1"             encoding="0b0"/>
+  <constant operands="stk"               encoding="0b1"/>
+  <constant operands="dref1,dref2"       encoding="0b00"/>
+  <constant operands="dref1,dref1"       encoding="0b10"/>
+  <constant operands="dref1,stk"         encoding="0b01"/>
+  <constant operands="stk,dref1"         encoding="0b011"/>
+  <constant operands="stk,stk"           encoding="0b111"/>
+  <constant operands="dref1,dref2,dref3" encoding="0b0000"/>
+  <constant operands="dref1,dref2,dref2" encoding="0b1000"/>
+  <constant operands="dref1,dref2,dref1" encoding="0b0100"/>
+  <constant operands="dref1,dref2,stk"   encoding="0b1100"/>
+  <constant operands="dref1,stk,dref2"   encoding="0b0010"/>
+  <constant operands="stk,dref1,dref2"   encoding="0b1110"/>
+  <constant operands="dref1,stk,dref1"   encoding="0b1010"/>
+  <constant operands="stk,dref1,dref1"   encoding="0b0001"/>
+  <constant operands="dref1,stk,stk"     encoding="0b0110"/>
+  <constant operands="stk,dref1,stk"     encoding="0b1001"/>
+  <constant operands="stk1,stk2,dref1"   encoding="0b0111"/>
+  <constant operands="stk2,stk1,dref1"   encoding="0b0101"/>
+  <constant operands="stk1,stk2,stk"     encoding="0b1011"/>
+  <constant operands="stk2,stk1,stk"     encoding="0b1101"/>
+  <constant operands="dref2,dref1,dref3" encoding="0b0011"/>
+  <constant operands="dref2,dref1,stk"   encoding="0b1111"/>
+</enumeration>
+
+<!-- operand types from page 10-11 ff.
+   type  size  name
+   ----  ----  ---------------
+   as    w     access_selector
+   b     b     boolean
+   bfs   w     bit_field_specifier
+   c     b     character
+   dai   w     domain_access_index
+   i     w     integer
+   o     w     ordinal
+   pd    dw    packed doubleword
+   pw    w     packed word
+   r     dw    real
+   si    db    short integer
+   so    db    short ordinal
+   sr    w     short real
+   tr    ew    temporary real
+
+-->
+
+<!-- operator code (id), opcode from page 10-15 ff. -->
+<!-- class (operands) and opcode from page 11-10 ff. -->
+<enumeration name="instruction_opcode" size="var">
+  <constant id="1"   mnem="mov_c"     name="move_character"                          operands="c,c"       encoding="0b00"/>
+  <constant id="2"   mnem="zro_c"     name="zero_character"                          operands="c"         encoding="0b0"/>
+  <constant id="3"   mnem="one_c"     name="one_character"                           operands="c"         encoding="0b01"/>
+  <constant id="4"   mnem="sav_c"     name="save_character"                          operands="c"         encoding="0b11"/>
+  <constant id="5"   mnem="and_c"     name="and_character"                           operands="c,c,c"     encoding="0b000"/>
+  <constant id="6"   nmem="ior_c"     name="inclusive_or_character"                  operands="c,c,c"     encoding="0b100"/>
+  <constant id="7"   mnem="xor_c"     name="exclusive_or_character"                  operands="c,c,c"     encoding="0b010"/>
+  <constant id="8"   mnem="eqv_c"     name="equivalence_character"                   operands="c,c,c"     encoding="0b110"/>
+  <constant id="9"   mnem="not_c"     name="not_character"                           operands="c,c"       encoding="0b10"/>
+  <constant id="10"  mnem="add_c"     name="add_character"                           operands="c,c,c"     encoding="0b001"/>
+  <constant id="11"  mnem="sub_c"     name="subtract_character"                      operands="c,c,c"     encoding="0b101"/>
+  <constant id="12"  mnem="inc_c"     name="increment_character"                     operands="c,c"       encoding="0b001"/>
+  <constant id="13"  mnem="dec_c"     name="decrement_character"                     operands="c,c"       encoding="0b101"/>
+  <constant id="14"  mnem="eql_c"     name="equal_character"                         operands="c,c,b"     encoding="0b0011"/>
+  <constant id="15"  mnem="neq_c"     name="not_equal_character"                     operands="c,c,b"     encoding="0b1011"/>
+  <constant id="16"  mnem="eqz_c"     name="equal_zero_character"                    operands="c,b"       encoding="0b011"/>
+  <constant id="17"  mnem="nez_c"     name="not_equal_zero_character"                operands="c,b"       encoding="0b111"/>
+  <constant id="18"  mnem="lss_c"     name="less_than_character"                     operands="c,c,b"     encoding="0b0111"/>
+  <constant id="19"  mnem="leq_c"     name="less_than_or_equal_character"            operands="c,c,b"     encoding="0b1111"/>
+  <constant id="20"  mnem="cvt_c_so"  name="convert_character_to_short_ordinal"      operands="c,so"      encoding=""/>
+  <constant id="21"  mnem="cvt_c_i"   name="convert_character_to_integer"            operands="c,i"       encoding=""/>
+
+  <constant id="22"  mnem="mov_so"    name="move_short_ordinal"                      operands="so,so"     encoding="0b0000"/>
+  <constant id="23"  mnem="zro_so"    name="zero_short_ordinal"                      operands="so"        encoding="0b000"/>
+  <constant id="24"  mnem="one_so"    name="one_short_ordinal"                       operands="so"        encoding="0b0100"/>
+  <constant id="25"  mnem="sav_so"    name="save_short_ordinal"                      operands="so"        encoding="0b1100"/>
+  <constant id="26"  mnem="and_so"    name="and_short_ordinal"                       operands="so,so,so"  encoding="0b0000"/>
+  <constant id="27"  mnem="ior_so"    name="inclusive_or_short_ordinal"              operands="so,so,so"  encoding="0b1000"/>
+  <constant id="28"  mnem="xor_so"    name="exclusive_or_short_ordinal"              operands="so,so,so"  encoding="0b0100"/>
+  <constant id="29"  mnem="eqv_so"    name="equivalence_short_ordinal"               operands="so,so,so"  encoding="0b1100"/>
+  <constant id="30"  mnem="not_so"    name="not_short_ordinal"                       operands="so,so"     encoding="0b1000"/>
+  <constant id="31"  mnem="ext_so"    name="extract_short_ordinal"                   operands="bfs,so,so" encoding="0b0010"/>
+  <constant id="32"  mnem="ins_so"    name="insert_short_ordinal"                    operands="bfs,so,so" encoding="0b1010"/>
+  <constant id="33"  menm="sig_so"    name="significant_bit_short_ordinal"           operands="so,so"     encoding="0b0100"/>
+  <constant id="34"  mnem="add_so"    name="add_short_ordinal"                       operands="so,so,so"  encoding="0b0110"/>
+  <constant id="35"  mnem="sub_so"    name="subtract_short_ordinal"                  operands="so,so,so"  encoding="0b1110"/>
+  <constant id="36"  mnem="inc_so"    name="increment_short_ordinal"                 operands="so,so"     encoding="0b1100"/>
+  <constant id="37"  mnem="dec_so"    name="decrement_short_ordinal"                 operands="so,so"     encoding="0b0010"/>
+  <constant id="38"  mnem="mul_so"    name="multiply_short_ordinal"                  operands="so,so,so"  encoding="0b0001"/>
+  <constant id="39"  mnem="div_so"    name="divide_short_ordinal"                    operands="so,so,so"  encoding="0b1001"/>
+  <constant id="40"  mnem="rem_so"    name="remainder_short_ordinal"                 operands="so,so,so"  encoding="0b0101"/>
+  <constant id="41"  mnem="eql_so"    name="equal_short_ordinal"                     operands="so,so,b"   encoding="0b000"/>
+  <constant id="42"  mnem="neq_so"    name="not_equal_short_ordinal"                 operands="so,so,b"   encoding="0b100"/>
+  <constant id="43"  mnem="eqz_so"    name="equal_zero_short_ordinal"                operands="so,b"      encoding="0b00"/>
+  <constant id="44"  mnem="nez_so"    name="not_equal_zero_short_ordinal"            operands="so,b"      encoding="0b10"/>
+  <constant id="45"  mnem="lss_so"    name="less_than_short_ordinal"                 operands="so,so,b"   encoding="0b010"/>
+  <constant id="46"  mnem="leq_so"    name="less_than_or_equal_short_ordinal"        operands="so,so,b"   encoding="0b110"/>
+  <constant id="47"  mnem="cvt_so_i"  name="convert_short_ordinal_to_integer"        operands="so,i"      encoding="0b00"/>
+
+  <constant id="22"  mnem="mov_si"    name="move_short_integer"                      operands="si,si"     encoding="0b0000"/>
+  <constant id="23"  mnem="zer_si"    name="zero_short_integer"                      operands="si"        encoding="0b000"/>
+  <constant id="24"  mnem="one_si"    name="one_short_integer"                       operands="si"        encoding="0b0100"/>
+  <constant id="25"  mnem="save_si"   name="save_short_integer"                      operands="si"        encoding="0b1100"/>
+  <constant id="48"  mnem="add_si"    name="add_short_integer"                       operands="si,si,si"  encoding="0b1101"/>
+  <constant id="49"  mnem="sub_si"    name="subtract_short_integer"                  operands="si,si,si"  encoding="0b0011"/>
+  <constant id="50"  mnem="inc_si"    name="increment_short_integer"                 operands="si,si"     encoding="0b1010"/>
+  <constant id="51"  mnem="dec_si"    name="decrement_short_integer"                 operands="si,si"     encoding="0b0110"/>
+  <constant id="52"  mnem="neg_si"    name="negate_short_integer"                    operands="si,si"     encoding="0b1110"/>
+  <constant id="53"  mnem="mul_si"    name="multiply_short_integer"                  operands="si,si,si"  encoding="0b01011"/>
+  <constant id="54"  mnem="div_si"    name="divide_short_integer"                    operands="si,si,si"  encoding="0b11011"/>
+  <constant id="55"  mnem="rem_si"    name="remainder_short_integer"                 operands="si,si,si"  encoding="0b00111"/>
+  <constant id="41"  mnem="eql_si"    name="equal_short_integer"                     operands="si,si,b"   encoding="0b000"/>
+  <constant id="42"  mnem="neq_si"    name="not_equal_short_integer"                 operands="si,si,b"   encoding="0b100"/>
+  <constant id="43"  mnem="eqz_si"    name="equal_zero_short_integer"                operands="si,b"      encoding="0b00"/>
+  <constant id="44"  mnem="nez_si"    name="not_equal_zero_short_integer"            operands="si,b"      encoding="0b10"/>
+  <constant id="56"  mnem="lss_si"    name="less_than_short_integer"                 operands="si,si,b"   encoding="0b001"/>
+  <constant id="57"  mnem="leq_si"    name="less_than_or_equal_short_integer"        operands="si,si,b"   encoding="0b101"/>
+  <constant id="58"  mnem="ptv_si"    name="positive_short_integer"                  operands="si,b"      encoding="0b01"/>
+  <constant id="59"  mnem="ntv_si"    name="negative_short_integer"                  operands="si,b"      encoding="0b011"/>
+  <constant id="60"  mnem="mir_si"    name="move_in_range_short_integer"             operands="pw,si,si"  encoding=""/>
+  <constant id="61"  mnem="cvt_si_i"  name="convert_short_integer_to_integer"        operands="si,i"      encoding="0b010"/>
+
+  <!-- XXX more needed here -->
+</enumeration>
+
+<!-- page 9-21 -->
+<enumeration name="procesor_class" size="3">
+  <constant name="all"   encoding="0b000"/>
+  <constant name="gdb"   encoding="0b001"/>
+  <constant name="ip"    encoding="0b010"/>
+</enumeration>
+
+<!-- page 9-20 -->
+<enumeration name="system_type" size="5">
+  <constant name="generic"            encoding="0b00000"/>
+  <constant name="object_table"       encoding="0b00001"/>
+  <constant name="domain"             encoding="0b00010"/>
+  <constant name="instruction"        encoding="0b00011"/>
+  <constant name="context"            encoding="0b00100"/>
+  <constant name="process"            encoding="0b00101"/>
+  <constant name="processor"          encoding="0b00110"/>
+  <constant name="port"               encoding="0b00111"/>
+  <constant name="carrier"            encoding="0b01000"/>
+  <constant name="storage_resource"   encoding="0b01001"/>
+  <constant name="physical_storage"   encoding="0b01010"/>
+  <constant name="storage_claim"      encoding="0b01011"/>
+  <constant name="dynamic_type"       encoding="0b01100"/>
+  <constant name="type_definition"    encoding="0b01101"/>
+  <constant name="type_control"       encoding="0b01110"/>
+  <!-- 01111 reserved -->  
+  <constant name="processor_communication" encoding="0b10000"/>
+  <!-- 10001 through 11111 reserved -->  
+</enumeration>
+
+<!-- access part on page 9-27 -->
+<!-- data part on page 9-30 -->
+<!-- processor fault access area on page 12-2 -->
+<object processor_class="gdp" system_type="processor" name="processor">
+  <system_rights index="1"/>
+  <system_rights index="2"/>
+  <system_rights index="3"/>
+
+  <ad_slot index="0"  name="current_process_carrier"      type="carrier"/>
+  <ad_slot index="1"  name="local_pco"                    type="processor_communication"/>
+  <ad_slot index="2"  name="global_pco"                   type="processor_communication"/>
+  <ad_slot index="3"  name="object_table_directory"       type="object_table"/>
+  <ad_slot index="4"  name="current_processor_carrier"    type="carrier"/>
+  <ad_slot index="5"  name="current_dispatching_port"     type="port"/>
+  <ad_slot index="6"  name="delay_carrier"                type="carrier"/>
+  <ad_slot index="7"  name="delay_port"                   type="port"/>
+
+  <!-- following two ADs are the processor fault access area -->
+  <ad_slot index="8"  name="fault_current_carrier"        type="carrier"/>
+  <ad_slot index="8"  name="fault_current_port"           type="port"/>
+  <!-- end of processor fault access area -->
+
+  <ad_slot index="10" name="generic_tdo"                  type="type_definition"/>
+  <ad_slot index="11" name="global_constants"             type="generic"/>
+
+  <ad_slot index="12" name="normal_carrier"               type="carrier"/>
+  <ad_slot index="13" name="normal_port"                  type="port"/>
+  <ad_slot index="14" name="alarm_carrier"                type="carrier"/>
+  <ad_slot index="15" name="alarm_port"                   type="port"/>
+  <ad_slot index="16" name="reconfiguration_carrier"      type="carrier"/>
+  <ad_slot index="17" name="reconfiguration_port"         type="port"/>
+  <ad_slot index="18" name="diagnostic_carrier"           type="carrier"/>
+  <ad_slot index="19" name="diagnostic_port"              type="port"/>
+
+  <field start="0"   size="16"  type="object_lock"            name="object_lock"/>
+  <field start="16"  size="16"  type="processor_status"       name="processor_status"/>
+  <field start="128" size="384" type="fault_data_area"        name="fault_data_area"/>
+</object>
+
+<object system_type="processor_communication" name="processor_communication">
+  <system_rights index="1" name="may_send_ipc"/>
+  <system_rights index="2"/>
+  <system_rights index="3"/>
+  <field start="0"   size="16" type="object_lock"  name="object_lock"/>
+  <field start="16"  size="16" type="ipc_message"  name="ipc_message"/>
+  <field start="32"  size="16" type="ordinal"      name="response_count"/>
+  <field start="48"  size="16" type="ordinal"      name="processor_count"/>  <!-- must be 1 for local -->
+  <field start="64"  size="16" type="ordinal"      name="processor_id"/>     <!-- 8 msb 0; all 0 for global -->
+</object>
+
+</definitions>
