@@ -195,6 +195,45 @@
     <ad_slot name="port_data_segment" value="diagnostic_dispatch_port_data_segment"/>
   </segment>
 
+  <segment name="scheduling_port_data_segment" type="port_data_segment">
+    <field name="head_free_buffer" value="24"/>
+    <field name="head_message_in_buffer" value="16"/>
+    <field name="tail_message_in_buffer" value="16"/>
+    <field name="port_message_queue">
+      <!-- in use -->
+      <field type="port_message_queue_entry" next_entry_displacement="0"/>
+      <!-- free list -->
+      <field type="port_message_queue_entry" next_entry_displacement="32"/>
+      <field type="port_message_queue_entry" next_entry_displacement="40"/>
+      <field type="port_message_queue_entry" next_entry_displacement="48"/>
+      <field type="port_message_queue_entry" next_entry_displacement="56"/>
+      <field type="port_message_queue_entry" next_entry_displacement="0"/>
+    </field>
+  </segment>
+
+  <segment name="scheduling_port_access_segment" type="port_access_segment" size="64">
+    <ad_slot name="port_data_segment" value="scheduling_port_data_segment"/>
+  </segment>
+
+  <segment name="fault_port_data_segment" type="port_data_segment">
+    <field name="head_free_buffer" value="16"/>
+    <field name="head_message_in_buffer" value="0"/>
+    <field name="tail_message_in_buffer" value="0"/>
+    <field name="port_message_queue">
+      <!-- free list -->
+      <field type="port_message_queue_entry" next_entry_displacement="24"/>
+      <field type="port_message_queue_entry" next_entry_displacement="32"/>
+      <field type="port_message_queue_entry" next_entry_displacement="40"/>
+      <field type="port_message_queue_entry" next_entry_displacement="48"/>
+      <field type="port_message_queue_entry" next_entry_displacement="56"/>
+      <field type="port_message_queue_entry" next_entry_displacement="0"/>
+    </field>
+  </segment>
+
+  <segment name="fault_port_access_segment" type="port_access_segment" size="64">
+    <ad_slot name="port_data_segment" value="fault_port_data_segment"/>
+  </segment>
+
   <segment name="processor_1_local_communication_data_segment" type="communication_data_segment">
     <field name="processor_count" value="1"/>
     <field name="processor_id"    value="1"/>
