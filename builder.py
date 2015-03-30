@@ -374,6 +374,9 @@ if False:
             f.write('\n')
 
 with open('tables.c', 'w') as f:
+    f.write('// Automatically generated - do not edit!\n')
+    f.write('\n')
+
     f.write('#include <stdbool.h>\n')
     f.write('\n')
 
