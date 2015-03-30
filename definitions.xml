@@ -1,0 +1,1256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2014 Eric Smith -->
+
+<definitions>
+
+<!-- operand lengths:
+        b:  byte           (8 bits)
+        db: double-byte   (16 bits)
+        w:  word          (32 bits)
+        dw: double-word   (64 bits)
+        ew: extended-word (80 bits)
+        br: branch reference (10 or 16 bits)
+  -->
+
+<instruction_set>
+  <!-- class encoding from Appendix A.3 on page A-21 -->
+  <enumeration name="class" size="var">
+    <constant name=""         encoding="0b001110"/>
+    <constant name="br"       encoding="0b101110"/>
+    <constant name="b,br"       encoding="0b0000"/>
+    <constant name="b"        encoding="0b011110"/>
+    <constant name="db"       encoding="0b111110"/>
+    <constant name="w"        encoding="0b000001"/>
+    <constant name="dw"       encoding="0b100001"/>
+    <constant name="ew"       encoding="0b010001"/>
+    <constant name="b,b"      encoding="0b110001"/>
+    <constant name="b,db"     encoding="0b001001"/>
+    <constant name="db,b"     encoding="0b101001"/>
+    <constant name="db,db"      encoding="0b1000"/>
+    <constant name="db,w"     encoding="0b011001"/>
+    <constant name="db,ew"    encoding="0b111001"/>
+    <constant name="w,b"      encoding="0b000101"/>
+    <constant name="w,db"     encoding="0b100101"/>
+    <constant name="w,w"        encoding="0b0100"/>
+    <constant name="w,ew"     encoding="0b010101"/>
+    <constant name="dw,b"     encoding="0b110101"/>
+    <constant name="dw,dw"    encoding="0b001101"/>
+    <constant name="dw,ew"    encoding="0b101101"/>
+    <constant name="ew,b"     encoding="0b011101"/>
+    <constant name="ew,w"     encoding="0b111101"/>
+    <constant name="ew,dw"    encoding="0b000011"/>
+    <constant name="ew,ew"    encoding="0b100011"/>
+    <constant name="b,b,b"    encoding="0b010011"/>
+    <constant name="db,db,b"    encoding="0b1100"/>
+    <constant name="db,db,db"   encoding="0b0010"/>
+    <constant name="db,db,w"  encoding="0b110011"/>
+    <constant name="db,w,w"   encoding="0b001011"/>
+    <constant name="w,w,b"      encoding="0b1010"/>
+    <constant name="w,w,w"      encoding="0b0110"/>
+    <constant name="w,w,ew"   encoding="0b101011"/>
+    <constant name="w,ew,ew"  encoding="0b011011"/>
+    <constant name="dw,dw,b"  encoding="0b111011"/>
+    <constant name="dw,dw,ew" encoding="0b000111"/>
+    <constant name="dw,ew,ew" encoding="0b100111"/>
+    <constant name="ew,w,ew"  encoding="0b010111"/>
+    <constant name="ew,dw,ew" encoding="0b110111"/>
+    <constant name="ew,ew,b"  encoding="0b001111"/>
+    <constant name="ew,ew,ew" encoding="0b101111"/>
+
+    <constant name="rsv1"     encoding="0b011111"/>
+    <constant name="rsv2"     encoding="0b111111"/>
+  </enumeration>
+
+  <!-- format encoding from Appendix A.4 page A-24 -->
+  <enumeration name="format" size="var">
+    <!-- order 0 -->
+    <constant name=""                        encoding=""/>
+
+    <!-- order 1 -->
+    <constant name="dref1"                encoding="0b0"/>
+    <constant name="stk"                  encoding="0b1"/>
+
+    <!-- order 2 -->
+    <constant name="dref1,dref2"         encoding="0b00"/>
+    <constant name="dref1,dref1"         encoding="0b10"/>
+    <constant name="dref1,stk"           encoding="0b01"/>
+    <constant name="stk,dref1"          encoding="0b011"/>
+    <constant name="stk,stk"            encoding="0b111"/>
+
+    <!-- order 3 -->
+    <constant name="dref1,dref2,dref3" encoding="0b0000"/>
+    <constant name="dref1,dref2,dref2" encoding="0b1000"/>
+    <constant name="dref1,dref2,dref1" encoding="0b0100"/>
+    <constant name="dref1,dref2,stk"   encoding="0b1100"/>
+    <constant name="dref1,stk,dref2"   encoding="0b0010"/>
+    <constant name="stk,dref1,dref2"   encoding="0b1110"/>
+    <constant name="dref1,stk,dref1"   encoding="0b1010"/>
+    <constant name="stk,dref1,dref1"   encoding="0b0001"/>
+    <constant name="dref1,stk,stk"     encoding="0b0110"/>
+    <constant name="stk,dref1,stk"     encoding="0b1001"/>
+    <constant name="stk1,stk2,dref1"   encoding="0b0111"/>
+    <constant name="stk2,stk1,dref1"   encoding="0b0101"/>
+    <constant name="stk1,stk2,stk"     encoding="0b1011"/>
+    <constant name="stk2,stk1,stk"     encoding="0b1101"/>
+    <constant name="dref2,dref1,dref3" encoding="0b0011"/>
+    <constant name="dref2,dref1,stk"   encoding="0b1111"/>
+  </enumeration>
+
+  <enumeration name="operator" size="var">
+    <!-- operator code (id) from Appendix A.1 on page A-1 -->
+    <!-- class (operands) and opcode from Appendix A.2 on page A-13 -->
+    <!-- operands attribute has string describing length of operands in bytes (1, 2, 4, 8, or 10) or
+	 branch ("br").
+	 Operands are sources unless followed by "(w)", designating a written result, or "(rmw)",
+	 designating a read-modify-write operand. -->
+    <operator id="1"   name="move_character"                          operands="b,b(w)"        encoding="0b00"/>
+    <operator id="2"   name="zero_character"                          operands="b(w)"          encoding="0b0"/>
+    <operator id="3"   name="one_character"                           operands="b(w)"          encoding="0b01"/>
+    <operator id="4"   name="save_character"                          operands="b(w)"          encoding="0b11"/>
+    <operator id="5"   name="and_character"                           operands="b,b,b(w)"      encoding="0b000"/>
+    <operator id="6"   name="or_character"                            operands="b,b,b(w)"      encoding="0b100"/>
+    <operator id="7"   name="xor_character"                           operands="b,b,b(w)"      encoding="0b010"/>
+    <operator id="8"   name="xnor_character"                          operands="b,b,b(w)"      encoding="0b110"/>
+    <operator id="9"   name="complement_character"                    operands="b,b(w)"        encoding="0b10"/>
+    <operator id="10"  name="add_character"                           operands="b,b,b(w)"      encoding="0b001"/>
+    <operator id="11"  name="subtract_character"                      operands="b,b,b(w)"      encoding="0b101"/>
+    <operator id="12"  name="increment_character"                     operands="b,b(w)"        encoding="0b001"/>
+    <operator id="13"  name="decrement_character"                     operands="b,b(w)"        encoding="0b101"/>
+    <operator id="14"  name="equal_character"                         operands="b,b,b(w)"      encoding="0b0011"/>
+    <operator id="15"  name="not_equal_character"                     operands="b,b,b(w)"      encoding="0b1011"/>
+    <operator id="16"  name="equal_zero_character"                    operands="b,b(w)"        encoding="0b011"/>
+    <operator id="17"  name="not_equal_zero_character"                operands="b,b(w)"        encoding="0b111"/>
+    <operator id="18"  name="greater_than_character"                  operands="b,b,b(w)"      encoding="0b0111"/>
+    <operator id="19"  name="greater_than_or_equal_character"         operands="b,b,b(w)"      encoding="0b1111"/>
+    <operator id="20"  name="convert_character_to_short_ordinal"      operands="b,db(w)"       encoding=""/>
+
+    <operator id="21"  name="move_short_ordinal"                      operands="db,db(w)"      encoding="0b0000"/>
+    <operator id="22"  name="zero_short_ordinal"                      operands="db(w)"         encoding="0b000"/>
+    <operator id="23"  name="one_short_ordinal"                       operands="db(w)"         encoding="0b100"/>
+    <operator id="24"  name="save_short_ordinal"                      operands="db(w)"         encoding="0b010"/>
+    <operator id="25"  name="and_short_ordinal"                       operands="db,db,db(w)"   encoding="0b0000"/>
+    <operator id="26"  name="or_short_ordinal"                        operands="db,db,db(w)"   encoding="0b1000"/>
+    <operator id="27"  name="xor_short_ordinal"                       operands="db,db,db(w)"   encoding="0b0100"/>
+    <operator id="28"  name="xnor_short_ordinal"                      operands="db,db,db(w)"   encoding="0b1100"/>
+    <operator id="29"  name="complement_short_ordinal"                operands="db,db(w)"      encoding="0b1000"/>
+    <operator id="30"  name="extract_short_ordinal"                   operands="db,db,db(w)"   encoding="0b0010"/>
+    <operator id="31"  name="insert_short_ordinal"                    operands="db,db,db(w)"   encoding="0b1010"/>
+    <operator id="32"  name="significant_bit_short_ordinal"           operands="db,db(w)"      encoding="0b0100"/>
+    <operator id="33"  name="add_short_ordinal"                       operands="db,db,db(w)"   encoding="0b0110"/>
+    <operator id="34"  name="subtract_short_ordinal"                  operands="db,db,db(w)"   encoding="0b01110"/>
+    <operator id="35"  name="increment_short_ordinal"                 operands="db,db(w)"      encoding="0b1100"/>
+    <operator id="36"  name="decrement_short_ordinal"                 operands="db,db(w)"      encoding="0b0010"/>
+    <operator id="37"  name="multiply_short_ordinal"                  operands="db,db,db(w)"   encoding="0b11110"/>
+    <operator id="38"  name="divide_short_ordinal"                    operands="db,db,db(w)"   encoding="0b00001"/>
+    <operator id="39"  name="remainder_short_ordinal"                 operands="db,db,db(w)"   encoding="0b10001"/>
+    <operator id="40"  name="equal_short_ordinal"                     operands="db,db,b(w)"    encoding="0b000"/>
+    <operator id="41"  name="not_equal_short_ordinal"                 operands="db,db,b(w)"    encoding="0b100"/>
+    <operator id="42"  name="equal_zero_short_ordinal"                operands="db,b(w)"       encoding="0b00"/>
+    <operator id="43"  name="not_equal_zero_short_ordinal"            operands="db,b(w)"       encoding="0b10"/>
+    <operator id="44"  name="greater_than_short_ordinal"              operands="db,db,b(w)"    encoding="0b010"/>
+    <operator id="45"  name="greater_than_or_equal_short_ordinal"     operands="db,db,b(w)"    encoding="0b110"/>
+    <operator id="46"  name="convert_short_ordinal_to_character"      operands="db,b(w)"       encoding="0b01"/>
+    <operator id="47"  name="convert_short_ordinal_to_ordinal"        operands="db,w(w)"       encoding="0b00"/>
+    <operator id="48"  name="convert_short_ordinal_to_temporary_real" operands="db,ew(w)"      encoding="0b0"/>
+
+    <operator id="21"  name="move_short_integer"                      operands="db,db(w)"      encoding="0b0000"/>
+    <operator id="22"  name="zero_short_integer"                      operands="db(w)"         encoding="0b000"/>
+    <operator id="23"  name="one_short_integer"                       operands="db(w)"         encoding="0b100"/>
+    <operator id="24"  name="save_short_integer"                      operands="db(w)"         encoding="0b010"/>
+    <operator id="49"  name="add_short_integer"                       operands="db,db,db(w)"   encoding="0b01001"/>
+    <operator id="50"  name="subtract_short_integer"                  operands="db,db,db(w)"   encoding="0b11001"/>
+    <operator id="51"  name="increment_short_integer"                 operands="db,db(w)"      encoding="0b1010"/>
+    <operator id="52"  name="decrement_short_integer"                 operands="db,db(w)"      encoding="0b0110"/>
+    <operator id="53"  name="negate_short_integer"                    operands="db,db(w)"      encoding="0b1110"/>
+    <operator id="54"  name="multiply_short_integer"                  operands="db,db,db(w)"   encoding="0b00101"/>
+    <operator id="55"  name="divide_short_integer"                    operands="db,db,db(w)"   encoding="0b10101"/>
+    <operator id="56"  name="remainder_short_integer"                 operands="db,db,db(w)"   encoding="0b01101"/>
+    <operator id="40"  name="equal_short_integer"                     operands="db,db,b(w)"    encoding="0b000"/>
+    <operator id="41"  name="not_equal_short_integer"                 operands="db,db,b(w)"    encoding="0b100"/>
+    <operator id="42"  name="equal_zero_short_integer"                operands="db,b(w)"       encoding="0b00"/>
+    <operator id="43"  name="not_equal_zero_short_integer"            operands="db,b(w)"       encoding="0b10"/>
+    <operator id="57"  name="greater_than_short_integer"              operands="db,db,b(w)"    encoding="0b001"/>
+    <operator id="58"  name="greater_than_or_equal_short_integer"     operands="db,db,b(w)"    encoding="0b101"/>
+    <operator id="59"  name="positive_short_integer"                  operands="db,b(w)"       encoding="0b011"/>
+    <operator id="60"  name="negative_short_integer"                  operands="db,b(w)"       encoding="0b111"/>
+    <operator id="61"  name="convert_short_integer_to_integer"        operands="db,w(w)"       encoding="0b10"/>
+    <operator id="62"  name="convert_short_integer_to_temporary_real" operands="db,ew(w)"      encoding="0b1"/>
+
+    <operator id="63"  name="move_ordinal"                            operands="w,w(w)"        encoding="0b000"/>
+    <operator id="64"  name="zero_ordinal"                            operands="w(w)"          encoding="0b000"/>
+    <operator id="65"  name="one_ordinal"                             operands="w(w)"          encoding="0b100"/>
+    <operator id="66"  name="save_ordinal"                            operands="w(w)"          encoding="0b010"/>
+    <operator id="67"  name="and_ordinal"                             operands="w,w,w(w)"      encoding="0b000"/>
+    <operator id="68"  name="or_ordinal"                              operands="w,w,w(w)"      encoding="0b0100"/>
+    <operator id="69"  name="xor_ordinal"                             operands="w,w,w(w)"      encoding="0b1100"/>
+    <operator id="70"  name="xnor_ordinal"                            operands="w,w,w(w)"      encoding="0b0010"/>
+    <operator id="71"  name="complement_ordinal"                      operands="w,w(w)"        encoding="0b100"/>
+    <operator id="72"  name="extract_ordinal"                         operands="db,w,w(w)"     encoding="0b00"/>
+    <operator id="73"  name="insert_ordinal"                          operands="db,w,w(w)"     encoding="0b10"/>
+    <operator id="74"  name="signficant_bit_ordinal"                  operands="w,db(w)"       encoding="0b00"/>
+    <operator id="75"  name="add_ordinal"                             operands="w,w,w(w)"      encoding="0b1010"/>
+    <operator id="76"  name="subtract_ordinal"                        operands="w,w,w(w)"      encoding="0b0110"/>
+    <operator id="77"  name="increment_ordinal"                       operands="w,w(w)"        encoding="0b010"/>
+    <operator id="78"  name="decrement_ordinal"                       operands="w,w(w)"        encoding="0b0110"/>
+    <operator id="79"  name="multiply_ordinal"                        operands="w,w,w(w)"      encoding="0b1110"/>
+    <operator id="80"  name="divide_ordinal"                          operands="w,w,w(w)"      encoding="0b0001"/>
+    <operator id="81"  name="remainder_ordinal"                       operands="w,w,w(w)"      encoding="0b1001"/>
+    <operator id="82"  name="equal_ordinal"                           operands="w,w,b(w)"      encoding="0b000"/>
+    <operator id="83"  name="not_equal_ordinal"                       operands="w,w,b(w)"      encoding="0b100"/>
+    <operator id="84"  name="equal_zero_ordinal"                      operands="w,b(w)"        encoding="0b00"/>
+    <operator id="85"  name="not_equal_zero_ordinal"                  operands="w,b(w)"        encoding="0b010"/>
+    <operator id="86"  name="greater_than_ordinal"                    operands="w,w,b(w)"      encoding="0b010"/>
+    <operator id="87"  name="greater_than_or_equal_ordinal"           operands="w,w,b(w)"      encoding="0b110"/>
+    <operator id="88"  name="convert_ordinal_to_short_ordinal"        operands="w,db(w)"       encoding="0b10"/>
+    <operator id="89"  name="convert_ordinal_to_integer"              operands="w,w(w)"        encoding="0b1110"/>
+    <operator id="90"  name="convert_ordinal_to_temporary_real"       operands="w,ew(w)"       encoding="0b0"/>
+
+    <operator id="63"  name="move_integer"                            operands="w,w(w)"        encoding="0b000"/>
+    <operator id="64"  name="zero_integer"                            operands="w(w)"          encoding="0b000"/>
+    <operator id="65"  name="one_integer"                             operands="w(w)"          encoding="0b100"/>
+    <operator id="66"  name="save_integer"                            operands="w(w)"          encoding="0b010"/>
+    <operator id="91"  name="add_integer"                             operands="w,w,w(w)"      encoding="0b0101"/>
+    <operator id="92"  name="subtract_integer"                        operands="w,w,w(w)"      encoding="0b1101"/>
+    <operator id="93"  name="increment_integer"                       operands="w,w(w)"        encoding="0b0001"/>
+    <operator id="94"  name="decrement_integer"                       operands="w,w(w)"        encoding="0b1001"/>
+    <operator id="95"  name="negate_integer"                          operands="w,w(w)"        encoding="0b0101"/>
+    <operator id="96"  name="multiply_integer"                        operands="w,w,w(w)"      encoding="0b0011"/>
+    <operator id="97"  name="divide_integer"                          operands="w,w,w(w)"      encoding="0b1011"/>
+    <operator id="98"  name="remainder_integer"                       operands="w,w,w(w)"      encoding="0b0111"/>
+    <operator id="82"  name="equal_integer"                           operands="w,w,b(w)"      encoding="0b000"/>
+    <operator id="83"  name="not_equal_integer"                       operands="w,w,b(w)"      encoding="0b100"/>
+    <operator id="84"  name="equal_zero_integer"                      operands="w,b(w)"        encoding="0b00"/>
+    <operator id="85"  name="not_equal_zero_integer"                  operands="w,b(w)"        encoding="0b010"/>
+    <operator id="99"  name="greater_than_integer"                    operands="w,w,b(w)"      encoding="0b001"/>
+    <operator id="100" name="greater_than_or_equal_integer"           operands="w,w,b(w)"      encoding="0b101"/>
+    <operator id="101" name="positive_integer"                        operands="w,b(w)"        encoding="0b110"/>
+    <operator id="102" name="negative_integer"                        operands="w,b(w)"        encoding="0b001"/>
+    <operator id="103" name="convert_integer_to_short_integer"        operands="w,db(w)"       encoding="0b01"/>
+    <operator id="104" name="convert_integer_to_ordinal"              operands="w,w(w)"        encoding="0b1101"/>
+    <operator id="105" name="convert_integer_to_temporary_real"       operands="w,ew(w)"       encoding="0b01"/>
+
+    <operator id="63"  name="move_short_real"                         operands="w,w(w)"        encoding="0b000"/>
+    <operator id="64"  name="zero_short_real"                         operands="w(w)"          encoding="0b000"/>
+    <operator id="66"  name="save_short_real"                         operands="w(w)"          encoding="0b010"/>
+    <operator id="106" name="add_short_real_short_real"               operands="w,w,ew(w)"     encoding="0b00"/>
+    <operator id="107" name="add_short_real_temporary_real"           operands="ew,w,ew(w)"    encoding="0b00"/>
+    <operator id="108" name="add_temporary_real_short_real"           operands="w,ew,ew(w)"    encoding="0b00"/>
+    <operator id="109" name="subtract_short_real_short_real"          operands="w,w,ew(w)"     encoding="0b10"/>
+    <operator id="110" name="subtract_short_real_temporary_real"      operands="ew,w,ew(w)"    encoding="0b10"/>
+    <operator id="111" name="subtract_temporary_real_short_real"      operands="w,ew,ew(w)"    encoding="0b10"/>
+    <operator id="112" name="multiply_short_real_short_real"          operands="w,w,ew(w)"     encoding="0b01"/>
+    <operator id="113" name="multiply_short_real_temporary_real"      operands="ew,w,ew(w)"    encoding="0b01"/>
+    <operator id="114" name="multiply_temporary_real_short_real"      operands="w,ew,ew(w)"    encoding="0b01"/>
+    <operator id="115" name="divide_short_real_short_real"            operands="w,w,ew(w)"     encoding="0b11"/>
+    <operator id="116" name="divide_short_real_temporary_real"        operands="ew,w,ew(w)"    encoding="0b11"/>
+    <operator id="117" name="divide_temporary_real_short_real"        operands="w,ew,ew(w)"    encoding="0b11"/>
+    <operator id="118" name="negate_short_real"                       operands="w,w(w)"        encoding="0b0011"/>
+    <operator id="119" name="absolute_value_short_real"               operands="w,w(w)"        encoding="0b1011"/>
+    <operator id="120" name="equal_short_real"                        operands="w,w,b(w)"      encoding="0b011"/>
+    <operator id="121" name="equal_zero_short_real"                   operands="w,b(w)"        encoding="0b101"/>
+    <operator id="122" name="greater_than_short_real"                 operands="w,w,b(w)"      encoding="0b0111"/>
+    <operator id="123" name="greater_than_or_equal_short_real"        operands="w,w,b(w)"      encoding="0b1111"/>
+    <operator id="124" name="positive_short_real"                     operands="w,b(w)"        encoding="0b011"/>
+    <operator id="125" name="negative_short_real"                     operands="w,b(w)"        encoding="0b111"/>
+    <operator id="126" name="convert_short_real_to_temporary_real"    operands="w,ew(w)"       encoding="0b11"/>
+
+    <operator id="127" name="move_real"                               operands="dw,dw(w)"      encoding="0b0"/>
+    <operator id="128" name="zero_real"                               operands="dw(w)"         encoding="0b0"/>
+    <operator id="129" name="save_real"                               operands="dw(w)"         encoding="0b1"/>
+    <operator id="130" name="add_real_real"                           operands="dw,dw,ew(w)"   encoding="0b00"/>
+    <operator id="131" name="add_real_temporary_real"                 operands="ew,dw,ew(w)"   encoding="0b00"/>
+    <operator id="132" name="add_temporary_real_real"                 operands="dw,ew,ew(w)"   encoding="0b00"/>
+    <operator id="133" name="subtract_real_real"                      operands="dw,dw,ew(w)"   encoding="0b10"/>
+    <operator id="134" name="subtract_real_temporary_real"            operands="ew,dw,ew(w)"   encoding="0b10"/>
+    <operator id="135" name="subtract_temporary_real_real"            operands="dw,ew,ew(w)"   encoding="0b10"/>
+    <operator id="136" name="multiply_real_real"                      operands="dw,dw,ew(w)"   encoding="0b01"/>
+    <operator id="137" name="multiply_real_temporary_real"            operands="ew,dw,ew(w)"   encoding="0b01"/>
+    <operator id="138" name="multiply_temporary_real_real"            operands="dw,ew,ew(w)"   encoding="0b01"/>
+    <operator id="139" name="divide_real_real"                        operands="dw,dw,ew(w)"   encoding="0b11"/>
+    <operator id="140" name="divide_real_temporary_real"              operands="ew,dw,ew(w)"   encoding="0b11"/>
+    <operator id="141" name="divide_temporary_real_real"              operands="dw,ew,ew(w)"   encoding="0b11"/>
+    <operator id="142" name="negate_real"                             operands="dw,dw(w)"      encoding="0b01"/>
+    <operator id="143" name="absolute_value_real"                     operands="dw,dw(w)"      encoding="0b11"/>
+    <operator id="144" name="equal_real"                              operands="dw,dw,b(w)"    encoding="0b0"/>
+    <operator id="145" name="equal_zero_real"                         operands="dw,b(w)"       encoding="0b0"/>
+    <operator id="146" name="greater_than_real"                       operands="dw,dw,b(w)"    encoding="0b01"/>
+    <operator id="147" name="greater_than_or_equal_real"              operands="dw,dw,b(w)"    encoding="0b11"/>
+    <operator id="148" name="positive_real"                           operands="dw,b(w)"       encoding="0b01"/>
+    <operator id="149" name="negative_real"                           operands="dw,b(w)"       encoding="0b11"/>
+    <operator id="150" name="convert_real_to_temporary_real"          operands="dw,ew(w)"      encoding=""/>
+
+    <operator id="151" name="move_temporary_real"                     operands="ew,ew(w)"      encoding="0b00"/>
+    <operator id="152" name="zero_temporary_real"                     operands="ew(w)"         encoding="0b0"/>
+    <operator id="153" name="save_temporary_real"                     operands="ew(w)"         encoding="0b1"/>
+    <operator id="154" name="add_temporary_real"                      operands="ew,ew,ew(w)"   encoding="0b00"/>
+    <operator id="155" name="subtract_temporary_real"                 operands="ew,ew,ew(w)"   encoding="0b10"/>
+    <operator id="156" name="mulutiply_temporary_real"                operands="ew,ew,ew(w)"   encoding="0b01"/>
+    <operator id="157" name="divide_temporary_real"                   operands="ew,ew,ew(w)"   encoding="0b011"/>
+    <operator id="158" name="remainder_temporary_real"                operands="ew,ew,ew(w)"   encoding="0b111"/>
+    <operator id="159" name="negate_temporary_real"                   operands="ew,ew(w)"      encoding="0b10"/>
+    <operator id="160" name="square_root_temporary_real"              operands="ew,ew(w)"      encoding="0b01"/>
+    <operator id="161" name="absolute_value_temporary_real"           operands="ew,ew(w)"      encoding="0b11"/>
+    <operator id="162" name="equal_temporary_real"                    operands="ew,ew,b(w)"    encoding="0b0"/>
+    <operator id="163" name="equal_zero_temporary_real"               operands="ew,b(w)"       encoding="0b0"/>
+    <operator id="164" name="greater_than_temporary_real"             operands="ew,ew,b(w)"    encoding="0b01"/>
+    <operator id="165" name="greater_than_or_equal_temporary_real"    operands="ew,ew,b(w)"    encoding="0b11"/>
+    <operator id="166" name="positive_temporary_real"                 operands="ew,b(w)"       encoding="0b01"/>
+    <operator id="167" name="negative_temporary_real"                 operands="ew,b(w)"       encoding="0b11"/>
+    <operator id="168" name="convert_temporary_real_to_ordinal"       operands="ew,w(w)"       encoding="0b0"/>
+    <operator id="169" name="convert_temporary_real_to_integer"       operands="ew,w(w)"       encoding="0b01"/>
+    <operator id="170" name="convert_temporary_real_to_short_real"    operands="ew,w(w)"       encoding="0b11"/>
+    <operator id="171" name="convert_temporary_real_to_real"          operands="ew,dw(w)"      encoding=""/>
+
+    <operator id="172" name="copy_access_descriptor"                  operands="db,db"         encoding="0b0001"/>
+    <operator id="173" name="null_access_descriptor"                  operands="db"            encoding="0b110"/>
+
+    <operator id="174" name="amplify_rights"                          operands="db,db"         encoding="0b1001"/>
+    <operator id="175" name="restrict_rights"                         operands="w,db"          encoding="0b011"/>
+
+    <operator id="176" name="create_private_type"                     operands="db,db,w"       encoding="0b00"/>
+    <operator id="177" name="create_public_type"                      operands="db,db,w"       encoding="0b10"/>
+    <operator id="178" name="retrieve_public_type_representation"     operands="db,db"         encoding="0b0101"/>
+    <operator id="179" name="retrieve_type_representation"            operands="db,db,db"      encoding="0b11101"/>
+    <operator id="180" name="retrieve_type_definition"                operands="db,db"         encoding="0b1101"/>
+
+    <operator id="181" name="create_generic_refinement"               operands="db,w,w"        encoding="0b01"/>
+    <operator id="182" name="create_typed_refinement"                 operands="w,w,w"         encoding="0b1111"/>
+    <operator id="183" name="retrieve_refined_object"                 operands="db,db,db"      encoding="0b00011"/>
+
+    <operator id="184" name="create_data_segment"                     operands="db,db,db"      encoding="0b10011"/>
+    <operator id="185" name="create_access_segment"                   operands="db,db,db"      encoding="0b01011"/>
+    <operator id="186" name="create_typed_segment"                    operands="db,db,w"       encoding="0b01"/>
+    <operator id="187" name="create_access_descriptor"                operands="db,db,db"      encoding="0b11011"/>
+
+    <operator id="188" name="inspect_access_descriptor"               operands="db,w(w)"       encoding="0b01"/>
+    <operator id="189" name="inspect_access"                          operands="db,w"          encoding="0b011"/>
+
+    <operator id="190" name="lock_object"                             operands="db,db,b(w)"    encoding="0b011"/>
+    <operator id="191" name="unlock_object"                           operands="db,db"         encoding="0b0011"/>
+    
+    <operator id="192" name="indivisibly_add_short_ordinal"           operands="db,db(rmw)"    encoding="0b1011"/>
+    <operator id="193" name="indivisibly_add_ordinal"                 operands="w,w(rmw)"      encoding="0b0111"/>
+    <operator id="194" name="indivisibly_insert_short_ordinal"        operands="db,db,db(rmw)" encoding="0b00111"/>
+    <operator id="195" name="indivisibly_insert_ordinal"              operands="db,w,w(rmw)"   encoding="0b11"/>
+
+    <operator id="196" name="branch"                                  operands="br"            encoding=""/>
+
+    <operator id="197" name="branch_true"                             operands="b,br"          encoding="0b0"/>
+    <operator id="198" name="branch_false"                            operands="b,br"          encoding="0b1"/>
+
+    <operator id="199" name="branch_indirect"                         operands="db"            encoding="0b001"/>
+
+    <operator id="200" name="branch_intersegment"                     operands="w"             encoding="0b110"/>
+    <operator id="201" name="branch_intersegment_without_trace"       operands="w"             encoding="0b001"/>
+    <operator id="202" name="branch_intersegment_and_link"            operands="w,w(w)"        encoding="0b1111"/>
+    '
+    <operator id="203" name="enter_access_segment"                    operands="db,db"         encoding="0b0111"/>
+    <operator id="204" name="enter_global_access_segment"             operands="db"            encoding="0b101"/>
+    <operator id="205" name="set_context_mode"                        operands="db"            encoding="0b011"/>
+    <operator id="206" name="call_context"                            operands="w"             encoding="0b101"/>
+    <operator id="207" name="call_context_with_message"               operands="w,db"          encoding="0b111"/>
+    <operator id="208" name="return_from_context"                     operands=""              encoding=""/>
+
+    <operator id="209" name="send"                                    operands="db,db"         encoding="0b01111"/>
+    <operator id="210" name="receive"                                 operands="db"            encoding="0b0111"/>
+    <operator id="211" name="conditional_send"                        operands="db,db,db(w)"   encoding="0b10111"/> <!-- XXX db result for a boolean? -->
+    <operator id="212" name="conditional_receive"                     operands="db,db(w)"      encoding="0b11111"/> <!-- XXX db result for a boolean? -->
+    <operator id="213" name="surrogate_send"                          operands="db,db,w"       encoding="0b11"/>
+    <operator id="214" name="surrogate_receive"                       operands="db,w"          encoding="0b111"/>
+    <operator id="215" name="delay"                                   operands="db"            encoding="0b1111"/>
+    <operator id="216" name="read_process_clock"                      operands="w(w)"          encoding="0b011"/>
+
+    <operator id="217" name="send_to_processor"                       operands="db,db,b(w)"    encoding="0b0111"/>
+    <operator id="218" name="broadcast_to_processors"                 operands="db,db,b(w)"    encoding="0b1111"/>
+    <operator id="219" name="read_processor_status_and_clock"         operands="w(w)"          encoding="0b111"/>
+    <operator id="220" name="move_to_interconnect"                    operands="db,db,db"      encoding="0b01111"/>
+    <operator id="221" name="move_from_interconnect"                  operands="db,db,db(w)"   encoding="0b11111"/>
+  </enumeration>
+</instruction_set>
+
+<!-- Table 11-3 on page 11-32 -->
+<enumeration name="segment_control" size="2">
+  <constant name="short_direct"             encoding="0b00"/>
+  <constant name="long_direct"              encoding="0b01"/>
+  <constant name="operand_stack_indirect"   encoding="0b10"/>
+  <constant name="general_indirect"         encoding="0b10"/>
+</enumeration>
+
+<!-- Table 11-5 on page 11-35 -->
+<struct name="short_object_selector" size="6">
+  <field start="0" size="2"  type="ordinal" name="entered_access_segment"/>
+  <field start="2" size="4"  type="ordinal" name="slot"/>
+</struct>
+
+<!-- Figure 8-11 on page 8-11, Table 11-6 on page 11-37 -->
+<struct name="object_selector" size="16">
+  <field start="0" size="2"  type="ordinal" name="entered_access_segment"/>
+  <field start="2" size="14" type="ordinal" name="slot"/>
+</struct>
+
+<union name="var_object_selector" size="var">
+  <field type="short_object_selector" name="short"/>
+  <field type="object_selector"       name="long"/>
+</union>
+
+<union name="data_reference_segment" size="var">
+  <field type="short_object_selector"            name="short_direct"/>
+  <field type="long_object_selector"             name="long_direct"/>
+  <field start="0" size="0"                      name="operand_stack_indirect"/>
+  <field type="general_indirect_object_selector" name="general_indirect"/>
+</union>
+
+<union name="ordinal_7_16" size="var">
+  <field type="ordinal" size="7"  name="short"/>
+  <field type="ordinal" size="16" name="long"/>
+</union>
+
+<union name="ordinal_0_16" size="var">
+  <field type="ordinal" size="0"  name="short"/>
+  <field type="ordinal" size="16" name="long"/>
+</union>
+
+<struct name="intrasegment_indirect" size="var">
+  <field type="boolean"      name="long"/>
+  <field type="ordinal_7_16" name="displacement"/>
+</struct>
+
+<struct name="general_indirect" size="var">
+  <field type="boolean"             name="long_object_selector"/>
+  <field type="boolean"             name="long_displacement"/>
+  <field type="var_object_selector" name="object_selector"/>
+  <field type="ordinal_7_16"        name="displacement"/>
+</struct>
+
+<enumeration name="indirect_reference_type" size="var">
+  <constant name="operand_stack_indirect" encoding="0b1"/>
+  <constant name="intrasegment_indirect"  encoding="0b10"/>
+  <constant name="general_indirect"       encoding="0b00"/>
+</enumeration>
+
+<struct name="indirect_reference" size="var">
+  <field type="indirect_reference_type" name="type"/>
+  <union discriminant_field="type">
+    <field discriminant_value="operand_stack_indirect" type="ordinal" size="0"      name="operand_stack_indirect"/>
+    <field discriminant_value="intrasegment_indirect"  type="intrasegment_indirect" name="intrasegment_indirect"/>
+    <field discriminant_value="general_indirect"       type="general_indirect"      name="general_indirect"/>
+  </union>
+</struct>
+
+<!-- Figure 11-16 on page 11-21 -->
+<struct name="static_vector_element_data_reference" size="var">
+  <field type="ordinal_0_16"       name="base"/>
+  <field type="indirect_reference" name="index"/>
+</struct>
+
+<!-- Figure 11-18 on page 11-26 -->
+<struct name="record_item_data_reference" size="var">
+  <field type="ordinal_7_16"       name="index"/>
+  <field type="indirect_reference" name="base"/>
+</struct>
+
+<!-- Figure 11-20 on page 11-29 -->
+<struct name="dynamic_vector_element_data_reference" size="var">
+  <field type="indirect_reference" name="base"/>
+  <field type="indirect_reference" name="index"/>
+</struct>
+
+<union name="data_reference_displacement" size="var">
+  <field type="ordinal_7_16"                          name="scalar"/>
+  <field type="record_item_data_reference"            name="record_item"/>
+  <field type="static_vector_element_data_reference"  name="static_vector_element"/>
+  <field type="dynamic_vector_element_data_reference" name="dynamic_vector_element"/>
+</union>
+
+<!-- Table 11-1 on page 11-17 -->
+<enumeration name="displacement_control" size="2">
+  <constant name="scalar"                 encoding="0b00"/>
+  <constant name="record_item"            encoding="0b01"/>
+  <constant name="static_vector_element"  encoding="0b10"/>
+  <constant name="dynamic_vector_element" encoding="0b11"/>
+</enumeration>
+
+<struct name="data_reference_control" size="var">
+  <field type="displacement_control" name="displacement"/>
+  <field type="segment_control"      name="segment"/>
+  <field type="boolean"              name="long_displacement"/> <!-- omitted for dynamic_vector_element -->
+</struct>
+
+
+<!-- Figure 11-6 on page 11-10, Figure 11-7 on page 11-12 -->
+<struct name="data_reference" size="var">
+  <field type="data_reference_control"      name="control"/>
+  <field type="data_reference_segment"      name="segment"/>
+  <field type="data_reference_displacement" name="displacement"/>
+</struct>
+
+<!-- Figure 11-31 on page 11-47 -->
+<struct name="branch_reference" size="var">
+  <field type="boolean" name="is_absolute"/>
+  <union discriminant_field="is_absolute">
+    <field discrminiant_value="false" type="integer" size="10" name="relative"/>
+    <field discriminant_value="true"  type="ordinal" size="16" name="absolute"/>
+  </union>
+</struct>
+
+<union name="reference">
+  <field type="data_reference" name="data_reference"/>
+  <field type="branch_reference" name="branch_reference"/>
+</union>
+
+<!-- Figure 11-1 on page 11-3 -->
+<struct name="instruction">
+  <field type="instruction_class"  name="class"/>
+  <field type="instruction_format" name="format"/> <!-- zero-length if order zero -->
+  <array name="references" min="0" max="3">
+    <field type="reference" name="reference"/>
+  </array>
+  <field type="instruction_opcode" name="opcode"/> <!-- zero-length if only one op in class -->
+</struct>
+
+<!-- page 2-12 -->
+<enumeration name="procesor_class" size="3">
+  <constant name="all"   encoding="0b000"/>
+  <constant name="gdb"   encoding="0b001"/>
+  <constant name="ip"    encoding="0b010"/>
+</enumeration>
+
+<enumeration name="base_type" size="1">
+  <constant name="data_segment"   encoding="0b0"/>
+  <constant name="access_segment" encoding="0b1"/>
+</enumeration>
+
+<!-- Table 2-1 on page 2-23, Table 12-3 on page 12-18 -->
+<!-- system type applicable to both data and access segments,
+     unless noted otherwise -->
+<enumeration name="system_type" size="5">
+  <constant name="generic"            encoding="0b00000"/>
+  <constant name="operand_stack"      encoding="0b00001"/> <!-- data -->
+  <constant name="domain"             encoding="0b00010"/> <!-- access -->
+  <constant name="object_table"       encoding="0b00010"/> <!-- data -->
+  <constant name="instruction"        encoding="0b00011"/> <!-- data -->
+  <constant name="context"            encoding="0b00100"/>
+  <constant name="process"            encoding="0b00101"/>
+  <constant name="processor"          encoding="0b00110"/>
+  <constant name="port"               encoding="0b00111"/>
+  <constant name="carrier"            encoding="0b01000"/>
+  <constant name="storage_resource"   encoding="0b01001"/>
+  <constant name="type_definition"    encoding="0b01010"/> <!-- access -->
+  <constant name="communication"      encoding="0b01010"/> <!-- data -->
+  <constant name="descriptor_control" encoding="0b01011"/> <!-- data -->
+  <constant name="refinement_control" encoding="0b01100"/> <!-- data -->
+</enumeration>
+
+<!-- Figure 7-13 on page 7-21 -->
+<struct name="bit_field_descriptor" size="16">
+  <field start="0" size="8" type="ordinal" name="beginning_bit_number"/>
+  <field start="8" size="8" type="ordinal" name="field_length"/> <!-- minus one -->
+</struct>
+
+<!-- Figure 2-7 on page 2-14 -->
+<!-- an access_segment contains only access_descriptors -->
+<struct name="access_descriptor" size="32">
+  <field start="0"  size="1"  type="boolean" name="valid"/>
+  <field start="1"  size="1"  type="boolean" name="system_rights_1"/>
+  <field start="2"  size="1"  type="boolean" name="system_rights_2"/>
+  <field start="3"  size="1"  type="boolean" name="system_rights_3"/>
+  <field start="4"  size="12" type="ordinal" name="segment_index"/>
+  <field start="16" size="1"  type="boolean" name="delete_rights"/>
+  <field start="17" size="1"  type="boolean" name="heap_flag"/>
+  <field start="18" size="1"  type="boolean" name="read_rights"/>
+  <field start="19" size="1"  type="boolean" name="write_rights"/>
+  <field start="20" size="12" type="ordinal" name="directory_index"/>
+</struct>
+
+<!-- Table 2-1 on page 2-18 and page 12-17 -->
+<enumeration name="descriptor_type" size="2">
+  <constant name="free"          encoding="0b00"/> <!-- or header, interconnect -->
+  <constant name="extended_type" encoding="0b01"/>
+  <constant name="refinement"    encoding="0b10"/>
+  <constant name="storage"       encoding="0b11"/>
+</enumeration>
+
+<!-- page 12-17 -->
+<struct name="fault_object_descriptor_type" size="5">
+  <field start="0"   size="2"  type="descriptor_type" name="descriptor_type"/>
+  <field start="2"   size="1"  type="boolean"         name="valid"/>
+  <field start="3"   size="1"  type="base_type"       name="base_type"/>
+  <field start="4"   size="1"  type="boolean"         name="storage_associated"/>
+</struct>
+
+<!-- page 12-19 -->
+<enumeration name="fault_level" size="2">
+  <constant name="context"    encoding="0b00"/>
+  <constant name="process_1"  encoding="0b01"/>
+  <constant name="process_2"  encoding="0b10"/>
+  <constant name="processor"  encoding="0b11"/>
+</enumeration>
+
+<!-- Figure 2-9 on page 2-24 -->
+<struct name="object_table_header" size="128">
+  <field start="0"   size="2"  type="descriptor_type" name="descriptor_type" value="free"/>
+  <field start="2"   size="1"                         name="preserved_2"        value="0b0"/>
+  <field start="3"   size="2"  type="constant"        name="descriptor_subtype" value="0b00"/>
+  <field start="5"   size="11"                        name="preserved_5"/>
+  <field start="16"  size="4"                         name="reserved_16"/>
+  <field start="20"  size="12" type="ordinal"         name="free_index"/>
+  <field start="32"  size="4"                         name="reserved_32"/>
+  <field start="36"  size="12" type="ordinal"         name="end_index"/>
+  <field start="48"  size="16" type="ordinal"         name="fault_level_number"/>
+  <field start="64"  size="8"                         name="preserved_64"/>
+  <field start="72"  size="1"  type="boolean"         name="reclamation"/>
+  <field start="73"  size="7"                         name="reserved_73"/>
+  <field start="80"  size="16" type="ordinal"         name="level_number"/>
+  <field start="96"  size="32" type="ordinal"         name="storage_claim"      default="0xffffffff"/>
+</struct>
+
+<!-- Figure 2-10 on page 2-27 -->
+<struct name="free_descriptor" size="128">
+  <field start="0"   size="2"  type="constant" name="descriptor_type"    value="0b00"/>
+  <field start="2"   size="1"                  name="preserved_2"        value="0b1"/>
+  <field start="3"   size="2"  type="constant" name="descriptor_subtype" value="0b00"/>
+  <field start="5"   size="11"                 name="preserved_5"/>
+  <field start="16"  size="4"                  name="reserved_16"/>
+  <field start="20"  size="12" type="ordinal"  name="free_index"/>
+  <field start="32"  size="32"                 name="preserved_32"/>
+  <field start="64"  size="8"                  name="preserved_64"/>
+  <field start="72"  size="1"  type="boolean"  name="reclamation"/>
+  <field start="73"  size="7"                  name="reserved_73"/>
+  <field start="80"  size="48"                 name="preserved_80"/>
+</struct>
+
+<!-- Figure E-1 on page E-1 -->
+<struct name="interconnect_descriptor" size="128">
+  <field start="0"   size="2"  type="constant" name="descriptor_type"    value="0b00"/>
+  <field start="2"   size="1"                  name="preserved_2"/>
+  <field start="3"   size="2"  type="constant" name="descriptor_subtype" value="0b01"/>
+  <field start="5"   size="1"  type="boolean"  name="input_output_lock"/>
+  <field start="6"   size="1"  type="boolean"  name="altered"/>
+  <field start="7"   size="1"  type="boolean"  name="accessed"/>
+  <field start="8"   size="24" type="ordinal"  name="segment_base_address"/>
+  <field start="32"  size="16" type="ordinal"  name="segment_length"/>  <!-- minus one -->
+  <field start="48"  size="24"                 name="preserved_48"/>
+  <field start="72"  size="1"  type="boolean"  name="reclamation"/>
+  <field start="73"  size="7"                  name="reserved_73"/>
+  <field start="80"  size="16" type="ordinal"  name="level_number"/>
+  <field start="96"  size="32"                 name="preserved_96"/>
+</struct>
+
+<!-- Figure 7-18 on page 7-47 -->
+<struct name="extended_type_descriptor" size="128">
+  <field start="0"   size="2"  type="constant"          name="descriptor_type"    value="0b01"/>
+  <field start="2"   size="1"  type="boolean"           name="valid"/>
+  <field start="3"   size="1"  type="boolean"           name="private"/>
+  <field start="4"   size="28"                          name="preserved_4"/>
+  <field start="32"  size="32" type="access_descriptor" name="tdo"/>
+  <field start="64"  size="8"                           name="preserved_64"/>
+  <field start="72"  size="1"  type="boolean"           name="reclamation"/>
+  <field start="73"  size="7"                           name="reserved_73"/>
+  <field start="80"  size="16" type="ordinal"           name="level_number"/>
+  <field start="32"  size="32" type="access_descriptor" name="extended_type_object"/>
+</struct>
+
+<!-- Figure 7-2 on page 7-56 -->
+<struct name="refinement_descriptor" size="128">
+  <field start="0"   size="2"  type="constant"          name="descriptor_type"    value="0b10"/>
+  <field start="2"   size="1"  type="boolean"           name="valid"/>
+  <field start="3"   size="1"  type="base_type"         name="base_type"/>
+  <field start="4"   size="12" type="ordinal"           name="bypass_segment_index"/>
+  <field start="16"  size="4"                           name="preserved_16"/>
+  <field start="20"  size="12" type="ordinal"           name="bypass_directory_index"/>
+  <field start="32"  size="16" type="ordinal"           name="refinement_length"/>
+  <field start="48"  size="16" type="ordinal"           name="base_displacement"/>
+  <field start="64"  size="5"  type="system_type"       name="system_type"/>
+  <field start="69"  size="3"  type="processor_class"   name="processor_class"/>
+  <field start="72"  size="1"  type="boolean"           name="reclamation"/>
+  <field start="73"  size="7"                           name="reserved_73"/>
+  <field start="80"  size="16" type="ordinal"           name="level_number"/>
+  <field start="96"  size="32" type="access_descriptor" name="sourceobject"/>
+</struct>
+
+<!-- a storage descriptor points to an actual segment in memory -->
+<!-- Figure 2-8 on page 2-19 -->
+<struct name="storage_descriptor" size="128">
+  <field start="0"   size="2"  type="constant"        name="descriptor_type" value="0b11"/>
+  <field start="2"   size="1"  type="boolean"         name="valid"/>
+  <field start="3"   size="1"  type="base_type"       name="base_type"/>
+  <field start="4"   size="1"  type="boolean"         name="storage_associated"/>
+  <field start="5"   size="1"  type="boolean"         name="input_output_lock"/>
+  <field start="6"   size="1"  type="boolean"         name="altered"/>
+  <field start="7"   size="1"  type="boolean"         name="accessed"/>
+  <field start="8"   size="24" type="ordinal"         name="segment_base_address"/>
+  <field start="32"  size="16" type="ordinal"         name="segment_length"/>  <!-- minus one -->
+  <field start="48"  size="16"                        name="preserved_48"/>
+  <field start="64"  size="5"  type="system_type"     name="system_type"/>
+  <field start="69"  size="3"  type="processor_class" name="processor_class"/>
+  <field start="72"  size="1"  type="boolean"         name="reclamation"/>
+  <field start="73"  size="7"                         name="reserved_73"/>
+  <field start="80"  size="16" type="ordinal"         name="level_number"/>
+  <field start="96"  size="1"  type="boolean"         name="dirty"/>
+  <field start="97"  size="31"                        name="preserved_97"/>
+</struct>
+
+<union name="descriptor">
+  <variant type="free_descriptor"          name="free_descriptor"/>
+  <variant type="storage_descriptor"       name="storage_descriptor"/>
+  <variant type="extended_type_descriptor" name="extended_type_descriptor"/>
+  <variant type="refinement_descriptor"    name="refinement_descriptor"/>
+  <variant type="interconnect_descriptor"  name="interconnect_descriptor"/>
+</union>
+
+<!-- Figure 2-11 on page 2-29 -->
+<struct name="storage_block_descriptor">
+  <field start="0"   size="32" type="ordinal"  name="base_address"/>
+  <field start="32"  size="32" type="ordinal"  name="end_address"/>
+  <field start="64"  size="1"  type="boolean"  name="last_block"/>
+  <field start="65"  size="1"  type="boolean"  name="dirty"/>
+  <field start="66"  size="30"                 name="preserved_66"/>
+  <field start="96"  size="32"                 name="reserved_96"/>
+</struct>
+
+<!-- page 3-34, page 8-20 -->
+<enumeration name="float_precision" size="2">
+  <constant name="temporary_real"    encoding="0b00"/>
+  <constant name="real"              encoding="0b01"/>
+  <constant name="short_real"        encoding="0b10"/>
+</enumeration>
+
+<!-- page 3-34, page 8-20 -->
+<enumeration name="float_rounding_mode" size="2">
+  <constant name="round_to_nearest"  encoding="0b00"/>
+  <constant name="round_up"          encoding="0b01"/>
+  <constant name="round_down"        encoding="0b10"/>
+  <constant name="round_toward_zero" encoding="0b11"/>
+</enumeration>
+
+<!-- Figure 3-15 on page 3-34, Figure 8-20 on page 8-20 -->
+<struct name="context_status">
+  <field start="0"  size="1"  type="boolean"             name="faulted"/>
+  <field start="1"  size="10"                            name="preserved_1"/>
+  <field start="11" size="1"  type="boolean"             name="fault_on_inexact"/>
+  <field start="12" size="2"  type="float_precision"     name="float_precision_control"/>
+  <field start="14" size="2"  type="float_rounding_mode" name="float_rounding_control"/>
+</struct>
+
+<!-- Figure 3-16 on page 3-36 -->
+<struct name="trace_information_area">
+  <field start="0"   size="16"  type="ordinal" name="trace_object_index"/>
+  <field start="16"  size="16"  type="ordinal" name="trace_ip"/>
+  <field start="24"  size="16"  type="ordinal" name="trace_event_code"/> <!-- operator_id, all 1s for fault -->
+</struct>
+
+<!-- Figure 4-20 on page 4-32, and page 4-49 -->
+<struct name="queuing_value" size="32">
+  <field start="16"  size="16" type="ordinal" name="deadline"/>
+  <field start="32"  size="16" type="ordinal" name="priority"/>
+</struct>
+
+<!-- Figure 4-20 on page 4-32 and Figure 6-21 on page 6-42 -->
+<struct name="port_message_queue_entry" size="64">
+  <field start="0"   size="16" type="ordinal"       name="next_entry_displacement"/>
+  <field start="16"  size="32" type="queuing_value" name="queuing_value"/>
+  <field start="48"  size="16"                      name="reserved_48"/>
+</struct>
+
+<!-- page 4-39 -->
+<enumeration name="carried_object_type" size="2">
+  <constant name="processor"   encoding="0b00"/>
+  <constant name="process"     encoding="0b01"/>
+  <constant name="surrogate"   encoding="0b10"/>
+</enumeration>
+
+<!-- Figure 4-23 on page 4-39 and Figure 6-24 on page 6-48 -->
+<struct name="carrier_status" size="16">
+  <field start="0"  size="2"  type="carried_object_type" name="carried_object_type"/>
+  <field start="2"  size="1"  type="boolean"             name="message_received"/>
+  <field start="3"  size="1"  type="boolean"             name="not_receive_queued"/>
+  <field start="4"  size="12"                            name="preserved_4"/>
+</struct>
+
+<!-- page 5-10, 6-32, 7-18 -->
+<enumeration name="lock_type" size="2">
+  <constant name="not_locked"                 encoding="0b00"/>
+  <constant name="hardware_locked"            encoding="0b01"/>
+  <constant name="long_term_software_locked"  encoding="0b10"/>
+  <constant name="short_term_software_locked" encoding="0b11"/>
+</enumeration>
+
+<!-- Figure 5-6 on page 5-10, Figure 6-14 on page 6-32, Figure 7-12 on page 7-17 -->
+<struct name="object_lock" size="16">
+  <field start="0"   size="2"  type="lock_type" name="lock_type"/>
+  <field start="2"   size="14" type="ordinal"   name="locker_id"/>
+</struct>
+
+<!-- page 5-16 -->
+<enumeration name="trace_mode" size="2">
+  <constant name="normal" encoding="0b00"/>
+  <constant name="fault"  encoding="0b01"/>
+  <constant name="flow"   encoding="0b10"/>
+  <constant name="full"   encoding="0b11"/>
+</enumeration>
+
+<!-- Figure 5-9 on page 5-15 -->
+<struct name="process_status" size="16">
+  <field start="0"   size="1"   type="boolean"    name="bound"/>
+  <field start="1"   size="1"   type="boolean"    name="faulted"/>
+  <field start="2"   size="1"   type="boolean"    name="waiting_for_message"/>
+  <field start="3"   size="1"   type="boolean"    name="fault_vector_mode"/>
+  <field start="4"   size="2"   type="trace_mode" name="trace_mode"/>
+  <field start="6"   size="1"   type="boolean"    name="trace_enable"/>
+  <field start="7"   size="8"                     name="preserved_7"/>
+  <field start="15"  size="1"   type="boolean"    name="first_port_operation_complete"/>
+</struct>
+
+<!-- Figure 5-7 on page 5-11 -->
+<struct name="local_sro_data" size="240">
+  <field start="0"   size="16"  type="ordinal"                  name="begining_block_index"/>
+  <field start="16"  size="16"  type="ordinal"                  name="ending_block_index"/>
+  <field start="32"  size="16"  type="object_lock"              name="sro_lock"/>
+  <field start="48"  size="32"  type="access_descriptor"        name="new_ad_copy"/>
+  <field start="80"  size="32"                                  name="reserved_80"/>
+  <field start="112" size="128" type="storage_block_descriptor" name="storage_block_descriptor"/>
+</struct>
+
+<!-- Figure 5-8 on page 5-13 -->
+<struct name="process_control_information" size="640">
+  <field start="0"   size="16"  type="ordinal"                  name="period_count"/>
+  <field start="16"  size="16"  type="ordinal"                  name="service_period"/>
+  <field start="32"  size="16"  type="process_status"           name="process_status"/>
+  <field start="48"  size="32"  type="ordinal"                  name="process_clock"/>
+  <field start="80"  size="16"  type="ordinal"                  name="process_id"/> <!-- low two bits must be zero -->
+  <field start="96"  size="48"                                  name="reserved_80"/>
+  <field start="144" size="16"  type="ordinal"                  name="entry_access_segment_1_level_number"/>
+  <field start="160" size="16"  type="ordinal"                  name="entry_access_segment_2_level_number"/>
+  <field start="176" size="16"  type="ordinal"                  name="entry_access_segment_3_level_number"/>
+  <field start="192" size="64"                                  name="reserved_192"/>
+</struct>
+
+<!-- page 6-33 -->
+<enumeration name="processor_state" size="4">
+  <constant name="initialization"     encoding="0b0000"/>
+  <constant name="idle"               encoding="0b0001"/>
+  <constant name="process_selection"  encoding="0b0010"/>
+  <constant name="process_binding"    encoding="0b0011"/>
+  <constant name="process_execution"  encoding="0b0100"/>
+  <constant name="process_suspension" encoding="0b0101"/>
+</enumeration>
+
+<!-- page 6-34 -->
+<enumeration name="dispatching_mode" size="2">
+  <constant name="normal"          encoding="0b00"/>
+  <constant name="alarm"           encoding="0b01"/>
+  <constant name="reconfiguration" encoding="0b10"/>
+  <constant name="diagnostic"      encoding="0b11"/>
+</enumeration>
+
+
+<!-- Figure 6-15 on page 6-33 -->
+<struct name="processor_status" size="16">
+  <field start="0"   size="4"   type="processor_state"  name="processor_state"/>
+  <field start="4"   size="2"   type="dispatching_mode" name="dispatching_mode"/>
+  <field start="6"   size="1"   type="boolean"          name="stopped_by_ipc"/>
+  <field start="7"   size="1"   type="boolean"          name="broadcast_acceptance"/>
+  <field start="8"   size="8"   type="ordinal"          name="processor_id"/>
+</struct>
+
+<!-- Table 6-1 on page 6-12 -->
+<enumeration name="ipc_message" size="16">
+  <constant name="wakeup"                                 encoding="0"/>
+  <constant name="stop_processor"                         encoding="1"/>
+  <constant name="clear_broadcast_acceptance_mode"        encoding="2"/>
+  <constant name="set_broadcast_acceptance_mode"          encoding="3"/>
+  <constant name="enter_normal_mode"                      encoding="4"/>
+  <constant name="enter_alarm_mode"                       encoding="5"/>
+  <constant name="enter_reconfiguration_mode"             encoding="6"/>
+  <constant name="enter_diagnostic_mode"                  encoding="7"/>
+  <constant name="suspend_and_requalify_context"          encoding="8"/>
+  <constant name="suspend_and_requalify_process"          encoding="9"/>
+  <constant name="suspend_and_requalify_processor"        encoding="10"/>
+  <constant name="suspend_and_fully_requalify_processor"  encoding="11"/>
+  <constant name="flush_object_table_cache"               encoding="12"/>
+  <constant name="flush_data_segment_cache"               encoding="13"/>
+  <constant name="start_processor"                        encoding="14"/>
+</enumeration>
+
+<!-- Figure 4-19 on page 4-31 and Figure 6-20 on page 6-41 -->
+<struct name="port_status" size="16">
+  <field start="0"  size="1"  type="boolean"     name="queue_discipline_priority_and_deadline"/>
+  <field start="1"  size="1"  type="boolean"     name="service_type_delay"/>
+  <field start="2"  size="14"                    name="reserved_2"/>
+</struct>
+
+<!-- Table 12-1 on page 12-14 -->
+<!-- The four-bit fault type is split into two two-bit fields int he fault_code, rr_low and rr_high. -->
+<enumeration name="fault_type" size="4">
+  <constant name="ff" encoding="0b0000" description="all other faults"/>
+  <constant name="sc" encoding="0b0001" description="index overflow during scaling"/>
+  <constant name="dp" encoding="0b0010" description="displacement overflow during address development"/>
+  <constant name="ip" encoding="0b0011" description="instruction pointer overflow during relative branch"/>
+  <constant name="ts" encoding="0b0100" description="test system type or descriptor type faults"/>
+  <constant name="so" encoding="0b0101" description="segment overflow"/>
+  <constant name="mo" encoding="0b0110" description="memory overflow"/>
+  <constant name="rr" encoding="0b0111" description="read rights"/>
+  <constant name="wr" encoding="0b1000" description="write rights"/>
+  <constant name="tw" encoding="0b1001" description="destination access segment access rights"/>
+</enumeration>
+
+<!-- Table 12-2 on page 12-15 -->
+<!-- Memory faults are type so, mo, rr, and wr -->
+<enumeration name="memory_fault_code" size="3">
+  <constant name="memory_access"         encoding="0b000"/> <!-- XXX should be 0b0xx (two don't care bits) -->
+  <constant name="interconnect_access"   encoding="0b100"/>
+  <constant name="access_segment_access" encoding="0b101"/>
+  <constant name="operand_stack_access"  encoding="0b111"/>
+</enumeration>
+
+<!-- page 12-16 -->
+<!-- Memory faults are type so, mo, rr, and wr -->
+<!-- valid if memory_fault_code is memory_access -->
+<enumeration name="memory_fault_item" size="4">
+  <constant name="context_access_segment"   encoding="0b0000"/>
+  <constant name="object_table_directory"   encoding="0b0100"/>
+  <constant name="processor_access_segment" encoding="0b0101"/>
+  <constant name="process_access_segment"   encoding="0b0111"/>
+  <constant name="context_data_segment"     encoding="0b1010"/>
+  <constant name="process_data_segment"     encoding="0b1011"/>
+  <constant name="data_segment_cache"       encoding="0b1110"/>
+  <constant name="object_table_cache"       encoding="0b1111"/>
+</enumeration>
+
+<!-- Figure 12-5 on page 12-11 -->
+<!-- Note on page 12-17: testing of system type and testing of descriptor type are not distinguished. -->
+<struct name="fault_code" size="16">
+  <field start="0"  size="4" type="fault_item"        name="memory_fault_item"/>      <!-- so, mo, rr, wr -->
+  <field start="0"  size="5" type="system_type"       name="system_type"/>            <!-- ts -->
+  <field start="0"  size="5" type="fault_object_descriptor_type" name="object_descriptor_type"/> <!-- ts -->
+  <field start="5"  size="2" type="ordinal"           name="rr_low"/>                 <!-- all -->
+  <field start="7"  size="1" type="boolean"           name="memory_write"/>           <!-- so, mo, rr, wr -->
+  <field start="9"  size="2" type="fault_level"       name="fault_level"/>            <!-- not memory, system type, or object descriptor -->
+  <field start="11" size="3" type="memory_fault_code" name="memory_fault_code"/>      <!-- so, mo, rr, wr -->
+  <field start="14" size="2" type="ordinal"           name="rr_high"/>                <!-- all -->
+</struct>
+
+<!-- Figure 12-6 on page 12-12 -->
+<struct name="fault_status" size="16">
+  <field start="0"   size="1"   type="boolean"   name="result_destination_memory"/>
+  <field start="1"   size="1"   type="boolean"   name="inexact_result"/>
+  <field start="2"   size="1"   type="boolean"   name="pre_instruction_stack_full"/>
+  <field start="3"   size="1"   type="boolean"   name="post_instruction_stack_full"/>
+  <field start="4"   size="12"                   name="reserved_4"/>
+</struct>
+
+<!-- Figure 12-4 on page 12-9 -->
+<struct name="fault_information_area" size="320">
+  <field start="0"   size="16"  type="ordinal"        name="fault_object_index"/>
+  <field start="16"  size="16"  type="ordinal"        name="post_instruction_ip"/>
+  <field start="32"  size="16"  type="ordinal"        name="pre_instruction_ip"/>
+  <field start="48"  size="16"  type="ordinal"        name="post_instruction_sp"/>
+  <field start="64"  size="16"  type="ordinal"        name="pre_instruction_sp"/>
+  <field start="80"  size="16"  type="fault_status"   name="fault_status"/>
+  <field start="96"  size="16"  type="ordinal"        name="operator_id"/>
+  <field start="112" size="16"  type="ordinal"        name="fault_code"/>
+  <field start="128" size="16"  type="ordinal"        name="fault_object_selector"/>
+  <field start="144" size="16"  type="ordinal"        name="fault_displacement"/>
+  <field start="160" size="80"  type="ordinal"        name="second_source_operand_or_exceptional_result"/>
+  <field start="240" size="80"  type="ordinal"        name="first_source_operand"/>
+</struct>
+
+<segment base_type="access_segment" system_type="generic" name="generic_access_segment">
+  <!-- no predefined organization -->
+</segment>
+
+<segment base_type="data_segment" system_type="generic" name="generic_data_segment">
+  <!-- no predefined organization -->
+</segment>
+
+<segment base_type="data_segment" processor_class="gdp" system_type="operand_stack" name="operand_stack_data_segment">
+  <!-- no predefined organization -->
+</segment>
+
+<!-- Figure 3-11 on page 3-23 -->
+<segment base_type="access_segment" system_type="domain" name="domain_access_segment">
+  <system_rights index="1"/> <!-- Table 3-1 on page 3-24 -->
+  <system_rights index="2"/>
+  <system_rights index="3"/>
+  <!-- no predefined organization -->
+</segment>
+
+<!-- an object_table data segment contains an object_table header at
+     displacement 0, and a series of descriptors every 16 bytes thereafter,
+     which may be free_descriptor, storage_descriptor, extended_type_descriptor, refinement_descriptor,
+     or interconnect_descriptor -->
+<segment base_type="data_segment" system_type="object_table" name="object_table_data_segment">
+  <field start="0" size="128" type="object_table_header" name="object_table_header"/>
+  <array start="128" name="descriptor_area">
+    <field size="128" type="descriptor" name="descriptor"/>
+  </array>
+</segment>
+
+<!-- Figure 3-12 on page 3-25 -->
+<segment base_type="data_segment" processor_class="gdp" system_type="instruction" name="instruction_data_segment">
+  <system_rights index="1" name="may_create_context"/> <!-- Table 3-1 on page 3-24 -->
+  <system_rights index="2" name="may_trace"/>
+  <system_rights index="3"/>
+  <field start="0"  size="16" type="ordinal"   name="context_access_segment_length"/>  <!-- minus one -->
+  <field start="16" size="16" type="ordinal"   name="context_data_segment_length"/>    <!-- minus one -->
+  <field start="32" size="16" type="ordinal"   name="operand_stack_segment_length"/>   <!-- minus one -->
+  <field start="48" size="16" type="ordinal"   name="initial_instruction_displacement"/>
+  <field start="64" size="16" type="ordinal"   name="data_constants_segment_index"/>
+  <field start="80" size="16" type="ordinal"   name="fault_object_index_in_domain"/>
+  <field start="96" size="16" type="ordinal"   name="trace_object_index_in_domain"/>
+  <vararray start="112" name="instructions">
+    <field type="instruction"/>
+  </vararray>
+</segment>
+
+<!-- Figure 3-13 on page 3-28 and Figure 8-2 on page 8-2 -->
+<segment base_type="access_segment" processor_class="gdp" system_type="context" name="context_access_segment">
+  <!-- indicies 10 and beyond may be access descriptors to any segments -->
+  <system_rights index="1"/> <!-- Table 3-3 on page 3-31 -->
+  <system_rights index="2"/>
+  <system_rights index="3"/>
+  <ad_slot index="9" name="operand_stack"          type="data_segment"/>
+  <ad_slot index="8" name="domain_of_definition"   type="domain_access_segment"/>
+  <ad_slot index="7" name="entry_access_segment_3" type="access_segment"/>
+  <ad_slot index="6" name="entry_access_segment_2" type="access_segment"/>
+  <ad_slot index="5" name="entry_access_segment_1" type="access_segment"/>
+  <ad_slot index="4" name="current_context"        type="context_access_segment"/>
+  <ad_slot index="3" name="message_object"/>
+  <ad_slot index="2" name="previous_context"       type="context_access_segment"/>
+  <ad_slot index="1" name="constants_data_segment" type="data_segment"/>
+  <ad_slot index="0" name="context_data_segment"   type="context_data_segment"/>
+</segment>
+
+<!-- Figure 3-14 on page 3-32 -->
+<segment base_type="data_segment" processor_class="gdp" system_type="context" name="context_data_segment">
+  <field start="0"  size="16" type="context_status"      name="context_status"/>
+  <field start="16" size="16" type="ordinal"             name="stack_pointer"/>
+  <field start="32" size="16" type="ordinal"             name="current_instruction_object_index"/>
+  <field start="48" size="16" type="ordinal"             name="instruction_pointer"/>
+  <field start="64" size="48" type="trace_information"   name="trace_information"/>
+</segment>
+
+<!-- Figure 5-4 on page 5-6 -->
+<segment base_type="access_segment" processor_class="gdp" system_type="process" name="process_access_segment">
+  <system_rights index="1"/> <!-- Table 5-1 on page 5-8 -->
+  <system_rights index="2"/>
+  <system_rights index="3"/>
+
+  <!-- following four ADs are store on a fault, for use by fault handler -->
+  <ad_slot index="11" name="surrogate_carrier"     type="carrier_access_segment"/>
+  <ad_slot index="10" name="current_carrier"       type="carrier_access_segment"/>
+  <ad_slot index="9"  name="current_port"          type="port_access_segment"/>
+  <ad_slot index="8"  name="current_message"/>
+  <!-- end of fault save ADs -->
+
+  <ad_slot index="7"  name="fault_port"            type="port_access_segment"/>
+  <ad_slot index="6"  name="scheduling_port"       type="port_access_segment"/>
+  <ad_slot index="5"  name="dispatching_port"      type="port_access_segment"/>
+  <ad_slot index="4"  name="process_carrier"       type="carrier_access_segment"/>
+  <ad_slot index="3"  name="local_object_table"/>
+  <ad_slot index="2"  name="global_access_segment" type="access_segment"/>
+  <ad_slot index="1"  name="current_context"       type="context_access_segment"/>
+  <ad_slot index="0"  name="process_data_segment"  type="process_data_segment"/>
+</segment>
+
+<!-- Figure 5-5 on page 5-9 -->
+<segment base_type="data_segment" processor_class="gdp" system_type="process" name="process_data_segment">
+  <system_rights index="1"/> <!-- Table 5-2 on page 5-17 -->
+  <system_rights index="2"/>
+  <system_rights index="3"/>
+  <field start="0"   size="16"  type="object_lock"                 name="object_lock"/>
+  <field start="16"  size="240" type="local_sro_data"              name="local_sro_data"/>
+  <field start="256" size="256" type="process_control_information" name="process_control_information"/>
+  <field start="512" size="320" type="fault_information_area"      name="process_context_fault_information_area"/>
+</segment>
+
+<!-- Figure 6-12 on page 6-27 -->
+<segment base_type="access_segment" processor_class="gdp" system_type="processor" name="processor_access_segment">
+  <system_rights index="1" name="may_broadcast_ipc"/> <!-- Table 6-2 on page 6-30 -->
+  <system_rights index="2" name="may_send_ipc"/>
+  <system_rights index="3"/>
+  <ad_slot index="19" name="diagnostic_port_carrier"      type="carrier_access_segment"/>
+  <ad_slot index="18" name="reconfiguration_port_carrier" type="carrier_access_segment"/>
+  <ad_slot index="17" name="alarm_port_carrier"           type="carrier_access_segment"/>
+  <ad_slot index="16" name="normal_port_carrier"          type="carrier_access_segment"/>
+  <ad_slot index="15" name="diagnostic_port"              type="port_access_segment"/>
+  <ad_slot index="14" name="reconfiguration_port"         type="port_access_segment"/>
+  <ad_slot index="13" name="alarm_port"                   type="port_access_segment"/>
+  <ad_slot index="12" name="normal_port"                  type="port_access_segment"/>
+
+  <!-- following four ADs filled in by fault processing -->
+  <ad_slot index="11" name="surrogate_carrier"            type="carrier_access_segment"/>
+  <ad_slot index="10" name="current_carrier"              type="carrier_access_segment"/>
+  <ad_slot index="9"  name="current_port"                 type="port_access_segment"/>
+  <ad_slot index="8"  name="current_message"/>
+  <!-- end of ADs filled in by fault processing -->
+
+  <ad_slot index="7"  name="delay_carrier"                type="carrier_access_segment"/>
+  <ad_slot index="6"  name="delay_port"                   type="port_access_segment"/>
+  <ad_slot index="5"  name="processor_carrier"            type="carrier_access_segment"/>
+  <ad_slot index="4"  name="object_table_directory"       type="object_table_data_segment"/>
+  <ad_slot index="3"  name="global_communication_segment" type="communication_data_segment"/>
+  <ad_slot index="2"  name="local_communication_segment"  type="communication_data_segment"/>
+  <ad_slot index="1"  name="current_process_carrier"      type="carrier_access_segment"/>
+  <ad_slot index="0"  name="processor_data_segment"       type="processor_data_segment"/>
+</segment>
+
+<!-- Figure 6-13 on page 6-31 -->
+<segment base_type="data_segment" processor_class="gdp" system_type="processor" name="processor_data_segment">
+  <system_rights index="1"/> <!-- Table 6-3 on page 6-35 -->
+  <system_rights index="2"/>
+  <system_rights index="3"/>
+  <field start="0"   size="16"  type="object_lock"            name="object_lock"/>
+  <field start="16"  size="16"  type="processor_status"       name="processor_status"/>
+  <field start="32"  size="480"                               name="reserved_32"/>
+  <field start="512" size="320" type="fault_information_area" name="fault_information_area"/>
+</segment>
+
+<!-- Figure 4-18 on page 4-30 and Figure 6-19 on page 6-40 -->
+<segment base_type="data_segment" system_type="port" name="port_data_segment">
+  <field start="0"   size="16" type="object_lock" name="object_lock"/>
+  <field start="16"  size="16" type="port_status" name="port_status"/>
+  <field start="32"  size="16" type="ordinal"     name="head_free_buffer"/>
+  <field start="48"  size="16" type="ordinal"     name="head_message_in_buffer"/>
+  <field start="64"  size="16" type="ordinal"     name="tail_message_in_buffer"/>
+  <field start="80"  size="16" type="ordinal"     name="port_time"/>
+  <field start="96"  size="32"                    name="reserved_96"/>
+  <array start="128" name="port_message_queue">
+    <field size="64" type="port_message_queue_entry" name="port_message_queue_entry"/>
+  </array>
+</segment>
+
+<!-- Figure 4-17 on page 4-28 and Figure 6-18 on page 6-38 -->
+<segment base_type="access_segment" system_type="port" name="port_access_segment">
+  <system_rights index="1" name="may_send"/> <!-- Table 4-1 on page 4-29 and Table 6-4 on page 6-39 -->
+  <system_rights index="2" name="may_receive"/>
+  <system_rights index="3"/>
+  <!-- indicies 4 and above are access descriptors to message objects -->
+  <ad_slot index="3" name="reserved"/>
+  <ad_slot index="2" name="tail_of_carrier_queue" type="carrier_access_segment"/>
+  <ad_slot index="1" name="head_of_carrier_queue" type="carrier_access_segment"/>
+  <ad_slot index="0" name="port_data_segment"     type="port_data_segment"/>
+</segment>
+
+<!-- Figure 4-22 on page 4-37 and Figure 6-23 on page 6-47 -->
+<segment base_type="data_segment" system_type="carrier" name="carrier_data_segment">
+  <field start="0"   size="16" type="object_lock"         name="object_lock"/>
+  <field start="16"  size="16" type="carrier_status"      name="carrier_status"/>
+  <field start="32"  size="1"  type="boolean"             name="maintenance_request"/>
+  <field start="33"  size="15"                            name="reserved_33"/> <!-- or is it preserved? -->
+  <field start="48"  size="16"                            name="reserved_48"/>
+  <field start="64"  size="32" type="queuing_value"       name="blocked_queuing_value"/>
+  <field start="96"  size="32" type="queuing_value"       name="second_port_queuing_value"/>
+</segment>
+
+<!-- Figure 4-21 on page 4-34 and Figure 6-22 on page 6-44 -->
+<segment base_type="access_segment" system_type="carrier" name="carrier_access_segment">
+  <system_rights index="1" name="may_surrogate"/> <!-- Table 4-2 on page 4-36 and Table 6-5 on page 6-46 -->
+  <system_rights index="2"/>
+  <system_rights index="3"/>
+  <ad_slot index="8" name="carried_object"/>
+  <ad_slot index="7" name="incoming_message"/>
+  <ad_slot index="6" name="outgoing_message"/>
+  <ad_slot index="5" name="refined_carrier"/>
+  <ad_slot index="4" name="maintenance_port"      type="port_access_segment"/>
+  <ad_slot index="3" name="second_port"           type="port_access_segment"/>
+  <ad_slot index="2" name="current_port"          type="port_access_segment"/>
+  <ad_slot index="1" name="next_carrier_in_queue" type="carrier_access_segment"/>
+  <ad_slot index="0" name="carrier_data_segment"  type="carrier_data_segment"/>
+</segment>
+
+<!-- Figure 2-14 on page 2-34 -->
+<segment base_type="data_segment" system_type="storage_resource" name="storage_resource_data_segment">
+  <system_rights index="1"/> <!-- Table 2-3 on page 2-36 -->
+  <system_rights index="2"/>
+  <system_rights index="3"/>
+  <field start="0"   size="16"                    name="preserved_0"/>
+  <field start="16"  size="4"                     name="reserved_4"/>
+  <field start="20"  size="12" type="ordinal"     name="beginning_block_index"/>
+  <field start="32"  size="4"                     name="reserved_32"/>
+  <field start="36"  size="12" type="ordinal"     name="current_block_index"/>
+  <field start="48"  size="16" type="object_lock" name="object_lock"/>
+  <field start="64"  size="64"                    name="preserved_64"/>
+  <array start="128" name="storage_block_descriptor_area">
+    <field size="128" type="storage_block_descriptor" name="storage_block_descriptor"/>
+  </array>
+</segment>
+
+<!-- Figure 2-13 on page 2-32, Table 2-2 on page 2-33 -->
+<segment base_type="access_segment" system_type="storage_resource" name="storage_resource_access_segment">
+  <system_rights index="1" name="allocation_allowed"/> <!-- Table 2-2 on page 2-33 -->
+  <system_rights index="2"/>
+  <system_rights index="3"/>
+  <ad_slot index="1" name="object_table"     type="object_table_data_segment"/>
+  <ad_slot index="0" name="storage_resource" type="storage_resource_data_segment"/>
+</segment>
+
+<segment base_type="access_segment" system_type="type_definition" name="type_definition_access_segment">
+  <system_rights index="1" name="may_create_extended_type"/> <!-- Table 7-1 on page 7-50 -->
+  <system_rights index="2" name="may_retrieve_extended_type"/>
+  <system_rights index="3"/>
+  <!-- no predefined organization -->
+</segment>
+
+<!-- Figure 6-16 on page 6-36 and Figure 6-17 on page 6-37 -->
+<segment base_type="data_segment" system_type="communication" name="communication_data_segment">
+  <field start="0"   size="16" type="object_lock"  name="object_lock"/>
+  <field start="16"  size="16" type="ipc_message"  name="ipc_message"/>
+  <field start="32"  size="16" type="ordinal"      name="response_count"/>
+  <field start="48"  size="16" type="ordinal"      name="processor_count"/>  <!-- must be 1 for local -->
+  <field start="64"  size="16" type="ordinal"      name="processor_id"/>     <!-- 8 msb 0; all 0 for global -->
+</segment>
+
+<!-- Figure 7-19 on page 7-51 -->
+<segment base_type="data_segment" system_type="descriptor_control" name="descriptor_control_data_segment">
+  <system_rights index="1" name="may_create_system_object"/> <!-- Table 7-2 on page 7-53 -->
+  <system_rights index="2" name="may_amplify_rights"/>
+  <system_rights index="3"/>
+  <field start="0"   size="1"  type="boolean"         name="type_testing_control"/>
+  <field start="1"   size="1"  type="boolean"         name="system_rights_1"/>
+  <field start="2"   size="1"  type="boolean"         name="system_rights_2"/>
+  <field start="3"   size="1"  type="boolean"         name="system_rights_3"/>
+  <field start="4"   size="12"                        name="preserved_4"/>
+  <field start="16"  size="1"  type="boolean"         name="delete_rights"/>
+  <field start="17"  size="1"  type="boolean"         name="heap_flag"/>
+  <field start="18"  size="1"  type="boolean"         name="read_rights"/>
+  <field start="19"  size="1"  type="boolean"         name="write_rights"/>
+  <field start="20"  size="3"                         name="preserved_20"/>
+  <field start="23"  size="1"  type="base_type"       name="base_type"/>
+  <field start="24"  size="5"  type="system_type"     name="system_type"/>
+  <field start="29"  size="3"  type="processor_class" name="processor_class"/>
+</segment>
+
+<!-- Figure 7-20 on page 7-54 -->
+<segment base_type="data_segment" system_type="refinement_control" name="refinement_control_data_segment">
+  <field start="0"   size="1"  type="boolean"         name="system_rights_removal"/>
+  <field start="1"   size="6"                         name="preserved_1"/>
+  <field start="7"   size="1"  type="base_type"       name="destination_base_type"/>
+  <field start="8"   size="5"  type="system_type"     name="destination_system_type"/>
+  <field start="13"  size="3"  type="processor_class" name="destination_processor_class"/>
+  <field start="16"  size="7"                         name="preserved_16"/>
+  <field start="23"  size="1"  type="base_type"       name="source_base_type"/>
+  <field start="24"  size="5"  type="system_type"     name="source_system_type"/>
+  <field start="29"  size="3"  type="processor_class" name="source_processor_class"/>
+</segment>
+
+<!-- IPC message encoding from Table 6-1 on page 6-12 -->
+<enumeration name="ipc_message" size="16">
+  <constant name="wakeup"                                encoding="0"/>
+  <constant name="stop_processor"                        encoding="1"/>
+  <constant name="clear_broadcast_acceptance"            encoding="2"/>
+  <constant name="set_broadcast_acceptance"              encoding="3"/>
+  <constant name="enter_normal_mode"                     encoding="4"/>
+  <constant name="enter_alarm_mode"                      encoding="5"/>
+  <constant name="enter_reconfiguration_mode"            encoding="6"/>
+  <constant name="enter_diagnostic_mode"                 encoding="7"/>
+  <constant name="suspend_and_requalify_context"         encoding="8"/>
+  <constant name="suspend_and_requalify_process"         encoding="9"/>
+  <constant name="suspend_and_requalify_processor"       encoding="10"/>
+  <constant name="suspend_and_fully_requalify_processor" encoding="11"/>
+  <constant name="flush_object_table_cache"              encoding="12"/>
+  <constant name="flush_data_segment_cache"              encoding="13"/>
+  <constant name="start_processor"                       encoding="14"/>
+</enumeration>
+
+</definitions>
