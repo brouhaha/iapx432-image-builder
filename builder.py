@@ -39,20 +39,25 @@ def get_single_named_element(base, element_name, attr_val, attr_name='name'):
     assert len(el) == 1
     return el[0]
 
-def get_elements_dict(base, element_name, index_attr='name', exclusive=True):
+def get_elements_dict(base, element_names, index_attr='name', exclusive=True):
     d = {}
+    if type(element_names) is str:
+        element_names = set([element_names])
     #for e in base.findall(element_name):
     for e in base:
         if exclusive:
-            if e.tag != element_name:
-                print 'tag', e.tag, 'element name', element_name
+            if e.tag not in element_names:
+                print 'tag', e.tag, 'element names', element_names
                 print e
                 sys.stdout.flush()
-            assert e.tag == element_name
+            assert e.tag in element_names
         else:
-            if e.tag != element_name:
+            if e.tag not in element_names:
                 continue
-        d[e.get(index_attr)] = e.attrib
+        if len(element_names) > 1:
+            d[e.get(index_attr)] = (e.tag, e.attrib)
+        else:
+            d[e.get(index_attr)] = e.attrib
     return d
 
 def size_and_value(s, sz=0):
@@ -123,13 +128,15 @@ def get_enumeration(ee):
         ed[e]['size'] = es
     return ed
 
+# also gets unions
 def get_struct(ee):
     size = ee.get('size')
     if size == 'var':
         size = 0
     else:
         size = int(size)
-    ed = get_elements_dict(ee, 'field')
+    # XXX could also be a struct or union
+    ed = get_elements_dict(ee, set(('field','array')))
     return ed
 
 
@@ -295,17 +302,33 @@ d432_root = d432_tree.getroot()
 d = { }
 
 for child in d432_root:
+    name = child.get('name')
     if child.tag == 'instruction_set':
         (operator_by_name, operator_by_id,
          class_by_operands, class_by_encoding,
          format_by_operands, format_by_order_encoding) = parse_instruction_set(child)
     elif child.tag == 'enumeration':
-        d[child.get('name')] = (child.tag, get_enumeration(child))
-#    elif child.tag == 'struct':
-#        d[child.get('name')] = (child.tag, get_struct(child))
+        if name in d:
+            print "enumeration problem:", name
+        assert name not in d
+        d[name] = (child.tag, get_enumeration(child))
+    elif child.tag == 'struct' or child.tag == 'union':
+        assert name not in d
+        d[name] = (child.tag, get_struct(child))
+    elif child.tag == 'segment':
+        assert name not in d
+        st = {}
+        st['base_type'] = child.get('base_type')
+        st['system_type'] = child.get('system_type')
+        d[name] = (child.tag, st)
 
 
-with open('operator.h', 'w') as f:
+gen_operator_h = False
+gen_operator_c = False
+gen_tables_c = False
+
+if gen_operator_h:
+  with open('operator.h', 'w') as f:
     f.write('// Automatically generated - do not edit!\n')
     f.write('\n')
 
@@ -354,7 +377,7 @@ with open('operator.h', 'w') as f:
     f.write('\n')
 
 
-if False:
+if gen_operator_c:
     with open('operator.c', 'w') as f:
         f.write('#include <stdbool.h>\n')
         f.write('\n')
@@ -373,7 +396,8 @@ if False:
             f.write('}\n');
             f.write('\n')
 
-with open('tables.c', 'w') as f:
+if gen_tables_c:
+  with open('tables.c', 'w') as f:
     f.write('// Automatically generated - do not edit!\n')
     f.write('\n')
 
@@ -425,4 +449,29 @@ with open('tables.c', 'w') as f:
 
 
 
-# image_tree = ET.parse('image.xml')
+def process_image(image_tree):
+    segments = { }
+    image_root = image_tree.getroot()
+
+    assert image_root.tag == 'image'
+
+    for segment in image_root:
+        assert segment.tag == 'segment'
+        name = segment.get('name')
+        si = { }
+        si['name'] = name
+        si['type'] = segment.get('type')
+        assert d[si['type']][0] == 'segment'
+        si['base_type'] = d[si['type']][1]['base_type']
+        si['system_type'] = d[si['type']][1]['system_type']
+        si['phys_addr'] = segment.get('phys_addr')
+        si['contents'] = [ ]
+        # if segment base type is data, contents is array of bytes (or None)
+        # if segment base type is access, contents is array of ADs (or None)
+        segments[name] = si
+
+    return segments
+
+segments = process_image(ET.parse('image.xml'))
+
+print len(segments)
