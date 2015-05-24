@@ -448,6 +448,7 @@ if gen_tables_c:
     f.write('\n')
 
 
+segment_base_type_names = frozenset(('data_segment', 'access_segment'))
 
 def process_image(image_tree):
     segments = { }
@@ -457,21 +458,70 @@ def process_image(image_tree):
 
     for segment in image_root:
         assert segment.tag == 'segment'
-        name = segment.get('name')
-        si = { }
-        si['name'] = name
-        si['type'] = segment.get('type')
-        assert d[si['type']][0] == 'segment'
+        segment_name = segment.get('name')
+        segment_type = segment.get('type')
+        dir_index = segment.get('dir_index')
+        seg_index = segment.get('seg_index')
+        assert d[segment_type][0] == 'segment'
+        si = { 'name': segment_name,
+               'type': segment_type,
+               'dir_index': None,  # assume coordinates to be assigned
+               'seg_index': None }
+        # XXX if specified, get segment's coordinates (directory index and segment index)
         si['base_type'] = d[si['type']][1]['base_type']
         si['system_type'] = d[si['type']][1]['system_type']
         si['phys_addr'] = segment.get('phys_addr')
-        si['contents'] = [ ]
-        # if segment base type is data, contents is array of bytes (or None)
-        # if segment base type is access, contents is array of ADs (or None)
-        segments[name] = si
+        assert si['base_type'] in segment_base_type_names
+        if si['base_type'] == 'data_segment':
+            if si['system_type'] == 'object_table_data_segment':
+                # XXX more code needed here
+                # assert dir_index not present or equal to 2
+                # assert seg_index not present, or greater than 0 and not equal to 2
+                # XXX check for reserve="n"
+                # check that no children
+                pass
+            else:
+                si['fields'] = []
+                offset = 0
+                for field in segment:
+                    assert field.tag == 'field'
+                    f = { }
+                    f['type'] = field.get('type')
+                    # XXX lookup type to get size
+                    size = 8
+                    si['fields'].append(f)
+                    offset += size
+        else: # 'access_segment'
+            si['ad_slots'] = []
+            offset = 0
+            for ad_slot in segment:
+                assert ad_slot.tag == 'ad_slot'
+                ads = { }
+                # XXX check whether name or index attribute, to get index
+                # XXX index * 4 = offset
+                ads['name'] = ad_slot.get('value')
+                si['ad_slots'].append(ads)
+                offset += 4
+        si['size'] = offset  # does not include segment prefix
+        segments[segment_name] = si
+
+    # XXX build object table directory
+
+    for s in segments:
+        # compute size of segment
+        pass
+
+    for s in segments:
+        # if segment has a base address, construct at that address and mark
+        # as written
+        pass
+
+    for s in segments:
+        # if segment not written, assign a base address and write
+        pass
 
     return segments
 
 segments = process_image(ET.parse('image.xml'))
 
-print len(segments)
+print '%d segments in image' % len(segments)
