@@ -287,50 +287,45 @@ def parse_operator_enum(operator_enum, class_by_operands):
 
 
 def parse_instruction_set(instruction_set):
-    (class_by_operands, class_by_encoding) = parse_class_enum(get_single_named_element(instruction_set, 'enumeration', 'class'))
+    inst_set = { }
+    (inst_set['class_by_operands'],
+     inst_set['class_by_encoding']) = parse_class_enum(get_single_named_element(instruction_set, 'enumeration', 'class'))
 
-    (format_by_operands, format_by_order_encoding) = parse_format_enum(get_single_named_element(instruction_set, 'enumeration', 'format'))
+    (inst_set['format_by_operands'],
+     inst_set['format_by_order_encoding']) = parse_format_enum(get_single_named_element(instruction_set, 'enumeration', 'format'))
 
-    (operator_by_name, operator_by_id) = parse_operator_enum(get_single_named_element(instruction_set, 'enumeration', 'operator'), class_by_operands)
+    (inst_set['operator_by_name'],
+     inst_set['operator_by_id']) = parse_operator_enum(get_single_named_element(instruction_set, 'enumeration', 'operator'), inst_set['class_by_operands'])
 
-    return (operator_by_name, operator_by_id,
-            class_by_operands, class_by_encoding,
-            format_by_operands, format_by_order_encoding)
-
-
-d432_tree = xml.etree.ElementTree.parse('definitions.xml')
-d432_root = d432_tree.getroot()
-
-d = { }
-
-for child in d432_root:
-    name = child.get('name')
-    if child.tag == 'instruction_set':
-        (operator_by_name, operator_by_id,
-         class_by_operands, class_by_encoding,
-         format_by_operands, format_by_order_encoding) = parse_instruction_set(child)
-    elif child.tag == 'enumeration':
-        if name in d:
-            print "enumeration problem:", name
-        assert name not in d
-        d[name] = (child.tag, get_enumeration(child))
-    elif child.tag == 'struct' or child.tag == 'union':
-        assert name not in d
-        d[name] = (child.tag, get_struct(child))
-    elif child.tag == 'segment':
-        assert name not in d
-        st = {}
-        st['base_type'] = child.get('base_type')
-        st['system_type'] = child.get('system_type')
-        d[name] = (child.tag, st)
+    return inst_set
 
 
-gen_operator_h = False
-gen_operator_c = False
-gen_tables_c = False
+def parse_arch(d432_tree):
+    d432_root = d432_tree.getroot()
+    arch = { }
+    arch['d'] = { }
 
-if gen_operator_h:
-  with open('operator.h', 'w') as f:
+    for child in d432_root:
+        name = child.get('name')
+        if child.tag == 'instruction_set':
+            arch['inst_set'] = parse_instruction_set(child)
+        elif child.tag == 'enumeration':
+            if name in arch['d']:
+                print "enumeration problem:", name
+            assert name not in arch['d']
+            arch['d'][name] = (child.tag, get_enumeration(child))
+        elif child.tag == 'struct' or child.tag == 'union':
+            assert name not in arch['d']
+            arch['d'][name] = (child.tag, get_struct(child))
+        elif child.tag == 'segment':
+            assert name not in arch['d']
+            st = {}
+            st['base_type'] = child.get('base_type')
+            st['system_type'] = child.get('system_type')
+            arch['d'][name] = (child.tag, st)
+    return arch
+
+def gen_operator_h(arch, f):
     f.write('// Automatically generated - do not edit!\n')
     f.write('\n')
 
@@ -370,8 +365,8 @@ if gen_operator_h:
     f.write('} class_info_t;\n')
     f.write('\n')
 
-    for id in operator_by_id:
-        operator = operator_by_id [id]
+    for id in arch['inst_set']['operator_by_id']:
+        operator = arch['inst_set']['operator_by_id'][id]
         f.write('  /* %3d */ operator_fn_t op_%s;' % (id, operator.names [0]))
         if len(operator.names) > 1:
             f.write(' // also %s' % ', '.join(operator.names[1:]))
@@ -379,27 +374,25 @@ if gen_operator_h:
     f.write('\n')
 
 
-if gen_operator_c:
-    with open('operator.c', 'w') as f:
-        f.write('#include <stdbool.h>\n')
+def gen_operator_c(arch, f):
+    f.write('#include <stdbool.h>\n')
+    f.write('\n')
+
+    f.write('#include "operator.h"\n')
+    f.write('\n')
+
+    for id in arch['inst_set']['operator_by_id']:
+        operator = arch['inst_set']['operator_by_id'][id]
+        f.write('/* %3d */\n' % id)
+        f.write('void op_%s (class_info_t *class_info, operator_info_t *operator_info)\n' % operator.names [0])
+        if len(operator.names) > 1:
+            f.write('/* also %s */\n' % ', '.join(operator.names[1:]))
+        f.write('{\n')
+        f.write('  ; /* XXX more code needed here */\n')
+        f.write('}\n');
         f.write('\n')
 
-        f.write('#include "operator.h"\n')
-        f.write('\n')
-
-        for id in operator_by_id:
-            operator = operator_by_id [id]
-            f.write('/* %3d */\n' % id)
-            f.write('void op_%s (class_info_t *class_info, operator_info_t *operator_info)\n' % operator.names [0])
-            if len(operator.names) > 1:
-                f.write('/* also %s */\n' % ', '.join(operator.names[1:]))
-            f.write('{\n')
-            f.write('  ; /* XXX more code needed here */\n')
-            f.write('}\n');
-            f.write('\n')
-
-if gen_tables_c:
-  with open('tables.c', 'w') as f:
+def gen_tables_c(arch, f):
     f.write('// Automatically generated - do not edit!\n')
     f.write('\n')
 
@@ -410,8 +403,8 @@ if gen_tables_c:
     f.write('\n')
 
     # write opcode tables, one per class
-    for class_encoding in sorted(class_by_encoding.keys(), key = lambda x: str(x)[::-1]):
-        clas = class_by_encoding[class_encoding]
+    for class_encoding in sorted(arch['inst_set']['class_by_encoding'].keys(), key = lambda x: str(x)[::-1]):
+        clas = arch['inst_set']['class_by_encoding'][class_encoding]
         f.write('// opcode table for class %s: %s' % (str(class_encoding), ','.join([operand_bits_to_type[bits] for bits in clas.refs])))
         if clas.branch_ref:
             if len(clas.refs) > 0:
@@ -431,7 +424,7 @@ if gen_tables_c:
     f.write('\n')
 
     # write class table
-    classes = expand_encoding_dict(class_by_encoding)
+    classes = expand_encoding_dict(arch['inst_set']['class_by_encoding'])
     f.write('const class_info_t class_info[%d] =\n' % len(classes))
     f.write('{\n')
     for clas in classes:
@@ -452,10 +445,10 @@ if gen_tables_c:
 
 segment_base_type_names = frozenset(('data_segment', 'access_segment'))
 
-def parse_segment(segment):
+def parse_segment(arch, segment):
     segment_name = segment.get('name')
     segment_type = segment.get('type')
-    assert d[segment_type][0] == 'segment'
+    assert arch['d'][segment_type][0] == 'segment'
     dir_index = segment.get('dir_index')
     seg_index = segment.get('seg_index')
     si = { 'name': segment_name,
@@ -463,8 +456,8 @@ def parse_segment(segment):
            'dir_index': None,  # assume coordinates to be assigned
            'seg_index': None }
     # XXX if specified, get segment's coordinates (directory index and segment index)
-    si['base_type'] = d[si['type']][1]['base_type']
-    si['system_type'] = d[si['type']][1]['system_type']
+    si['base_type'] = arch['d'][si['type']][1]['base_type']
+    si['system_type'] = arch['d'][si['type']][1]['system_type']
     si['phys_addr'] = segment.get('phys_addr')
     assert si['base_type'] in segment_base_type_names
     if si['base_type'] == 'data_segment':
@@ -500,7 +493,7 @@ def parse_segment(segment):
     si['size'] = offset  # does not include segment prefix
     return si
 
-def process_image(image_tree):
+def process_image(arch, image_tree):
     segments = { }
     image_root = image_tree.getroot()
 
@@ -509,7 +502,7 @@ def process_image(image_tree):
     for segment in image_root:
         assert segment.tag == 'segment'
         segment_name = segment.get('name')
-        segments[segment_name] = parse_segment(segment)
+        segments[segment_name] = parse_segment(arch, segment)
 
     # XXX build object table directory
 
@@ -535,6 +528,21 @@ parser.add_argument('-a', '--arch',
                     type=argparse.FileType('r', 0),
                     default='definitions.xml',
                     help='architecture definition (XML)')
+parser.add_argument('--gen-operator-h',
+                    nargs='?',
+                    type=argparse.FileType('w', 0),
+                    const='operator.h',
+                    help='generate C operator definitions header file')
+parser.add_argument('--gen-operator-c',
+                    nargs='?',
+                    type=argparse.FileType('w', 0),
+                    const='operator.c',
+                    help='generate C operator definitions source file')
+parser.add_argument('--gen-tables-c',
+                    nargs='?',
+                    type=argparse.FileType('w', 0),
+                    const='tables.c',
+                    help='generate C tables source file')
 parser.add_argument('image',
                     type=argparse.FileType('r', 0),
                     nargs=1,
@@ -542,12 +550,27 @@ parser.add_argument('image',
 
 args = parser.parse_args()
 
+print args
+
 arch_tree = xml.etree.ElementTree.parse(args.arch)
 args.arch.close()
+arch = parse_arch(arch_tree)
+
+if args.gen_operator_h:
+    gen_operator_h(arch, args.gen_operator_h)
+    args.gen_operator_h.close()
+
+if args.gen_operator_c:
+    gen_operator_c(arch, args.gen_operator_c)
+    args.gen_operator_c.close()
+
+if args.gen_tables_c:
+    gen_tables_c(arch, args.gen_tables_c)
+    args.gen_tables_c.close()
 
 image_tree = xml.etree.ElementTree.parse(args.image[0])
 args.image[0].close()
+segments = process_image(arch, image_tree)
 
-segments = process_image(image_tree)
 print '%d segments in image' % len(segments)
 
