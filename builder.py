@@ -2,11 +2,13 @@
 
 # Copyright 2014 Eric Smith <spacewar@gmail.com>
 
+import argparse
 import collections
 import pprint
 import re
 import sys
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree
+#import xml.etree.ElementTree as ET
 
 size_value_t = collections.namedtuple('size_value_t', ['size',
                                                        'value'])
@@ -296,7 +298,7 @@ def parse_instruction_set(instruction_set):
             format_by_operands, format_by_order_encoding)
 
 
-d432_tree = ET.parse('definitions.xml')
+d432_tree = xml.etree.ElementTree.parse('definitions.xml')
 d432_root = d432_tree.getroot()
 
 d = { }
@@ -526,6 +528,26 @@ def process_image(image_tree):
 
     return segments
 
-segments = process_image(ET.parse('image.xml'))
 
+
+parser = argparse.ArgumentParser(description='iAPX 432 Image Builder')
+parser.add_argument('-a', '--arch',
+                    type=argparse.FileType('r', 0),
+                    default='definitions.xml',
+                    help='architecture definition (XML)')
+parser.add_argument('image',
+                    type=argparse.FileType('r', 0),
+                    nargs=1,
+                    help='image definition (XML)')
+
+args = parser.parse_args()
+
+arch_tree = xml.etree.ElementTree.parse(args.arch)
+args.arch.close()
+
+image_tree = xml.etree.ElementTree.parse(args.image[0])
+args.image[0].close()
+
+segments = process_image(image_tree)
 print '%d segments in image' % len(segments)
+
