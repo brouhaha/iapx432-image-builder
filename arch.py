@@ -7,9 +7,8 @@ import collections
 import re
 import sys
 import xml.etree.ElementTree
-#import xml.etree.ElementTree as ET
 
-class Arch(object):
+class arch(object):
     segment_base_type_names = frozenset(('data_segment', 'access_segment'))
 
     size_value_t = collections.namedtuple('size_value_t', ['size',
@@ -458,7 +457,7 @@ if __name__ == '__main__':
 
     arch_tree = xml.etree.ElementTree.parse(args.arch)
     args.arch.close()
-    arch = Arch(arch_tree)
+    arch = arch(arch_tree)
 
     if args.gen_operator_h:
         gen_operator_h(arch, args.gen_operator_h)
