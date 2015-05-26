@@ -43,8 +43,8 @@ class Allocation(object):
 
 class Field(object):
     def __init__(self, image, field_tree):
-        self._image = image
-        self._arch = image.arch
+        self.image = image
+        self.arch = image.arch
         self.size = None
         self.offset = None
         # XXX
@@ -54,10 +54,12 @@ class Field(object):
         return 0
 
 
-class Segment(object):
-    _seg_allocation = table_by_seg_index = { }
-    _segment_by_coord = { }
-    
+class Descriptor(object):
+    def __init__(self, image, tree):
+        self.image = image
+        self.arch = image.arch
+        self.name = tree.get('name')
+
     def _set_dir_index(self, dir_index):
         if self.dir_index is not None:
             assert dir_index == self.dir_index
@@ -66,8 +68,8 @@ class Segment(object):
             if (self.dir_index is not None and
                 self.seg_index is not None):
                 coord = (self.dir_index, self.seg_index)
-                assert coord not in type(self)._segment_by_coord
-                type(self)._segment_by_coord[coord] = self
+                assert coord not in self.image.descriptor_by_coord
+                self.image.descriptor_by_coord[coord] = self
 
     def _set_seg_index(self, seg_index):
         if self.seg_index is not None:
@@ -77,16 +79,19 @@ class Segment(object):
             if (self.dir_index is not None and
                 self.seg_index is not None):
                 coord = (self.dir_index, self.seg_index)
-                assert coord not in type(self)._segment_by_coord
-                type(self)._segment_by_coord[coord] = self
+                assert coord not in self.image.descriptor_by_coord
+                self.image.descriptor_by_coord[coord] = self
 
+    def assign_coordinates(self):
+        pass
+
+
+class Segment(Descriptor):
     def __init__(self, image, segment_tree):
-        self._image = image
-        self._arch = image.arch
-        self.name = segment_tree.get('name')
+        super(Segment, self).__init__(image, segment_tree)
         self.segment_type = segment_tree.get('type')
-        assert self.segment_type in self._arch.symbols
-        st = self._arch.symbols[self.segment_type]
+        assert self.segment_type in self.arch.symbols
+        st = self.arch.symbols[self.segment_type]
         assert st.type == 'segment'
         self.system_type = st.value.system_type
         self.base_type = st.value.base_type
@@ -104,11 +109,8 @@ class Segment(object):
 
         self.fields = []
         for field_tree in segment_tree:
-            self.fields.append(Field(self._image, field_tree))
+            self.fields.append(Field(self.image, field_tree))
         print "%d fields" % len(self.fields)
-
-    def assign_coordinates(self):
-        pass
 
     def compute_size(self):
         self.data = bytearray(65536)
@@ -137,7 +139,6 @@ class Segment(object):
         self.written = True
 
 
-
 class SegmentTable(Segment):
     def __init__(self, image, segment_tree):
         super(SegmentTable, self).__init__(image, segment_tree)
@@ -154,56 +155,84 @@ class SegmentTableDirectory(SegmentTable):
             assert self.phys_addr == 0
 
 
+class Refinement(Descriptor):
+    def __init__(self, image, descriptor_tree):
+        super(Refinement, self).__init__(image, descriptor_tree)
+
+
+class ExtendedType(Descriptor):
+    def __init__(self, image, descriptor_tree):
+        super(Refinement, self).__init__(image, descriptor_tree)
+
+
 class Image(object):
-    def parse_segment(self, segment_tree):
-        segment_name = segment_tree.get('name')
-        print "segment '%s'" % segment_name
-        assert segment_name not in self.segment_by_name
-        segment_type = segment_tree.get('type')
-        object_table_name = segment_tree.get('object_table')
-        if segment_type == 'object_table_data_segment':
-            if segment_name == object_table_name:
-                assert self.segment_table_directory is None
-                segment = SegmentTableDirectory(self, segment_tree)
-                self.segment_table_directory = segment
+    class InvalidDescriptorTypeError(Exception):
+        def __init__(self, descriptor_tree):
+            print descriptor_tree
+            self.msg = 'invalid descriptor type "%s"' % descriptor_tree.tag
+
+    def parse_descriptor(self, descriptor_tree):
+        descriptor_type = descriptor_tree.tag
+        descriptor_name = descriptor_tree.get('name')
+        assert descriptor_name not in self.descriptor_by_name
+        if descriptor_type == 'segment':
+            segment_type = descriptor_tree.get('type')
+            object_table_name = descriptor_tree.get('object_table')
+            if segment_type == 'object_table_data_segment':
+                if descriptor_name == object_table_name:
+                    assert self.segment_table_directory is None
+                    segment = SegmentTableDirectory(self, descriptor_tree)
+                    self.segment_table_directory = segment
+                else:
+                    segment = SegmentTable(self, descriptor_tree)
             else:
-                segment = SegmentTable(self, segment_tree)
+                segment = Segment(self, descriptor_tree)
+            self.descriptor_by_name[descriptor_name] = segment
+        elif descriptor_type == 'refinement':
+            refinement = Refinement(self, descriptor_tree)
+            self.descriptor_by_name[descriptor_name] = refinement
+        elif descriptor_type == 'extended_type':
+            extended_type = ExtendedType(self, descriptor_tree)
+            self.descriptor_by_name[descriptor_name] = extended_type
         else:
-            segment = Segment(self, segment_tree)
-        self.segment_by_name[segment_name] = segment
+            raise self.InvalidDescriptorType(descriptor_tree)
+        print "%s '%s'" % (descriptor_type, descriptor_name)
 
     def __init__(self, arch, image_tree):
         self.arch = arch
         image_root = image_tree.getroot()
         assert image_root.tag == 'image'
-        self.segment_by_name = {}
+        self.descriptor_by_coord = { }
+        self.descriptor_by_name = { }
         self.segment_table_directory = None
 
-        for segment_tree in image_root:
-            assert segment_tree.tag == 'segment'
-            self.parse_segment(segment_tree)
+        for descriptor_tree in image_root:
+            self.parse_descriptor(descriptor_tree)
 
         # compute sizes of all segments
-        for segment in self.segment_by_name.values():
-            segment.compute_size()
+        for descriptor in self.descriptor_by_name.values():
+            if isinstance(descriptor, Segment):
+                descriptor.compute_size()
 
         # assign coordinates to all segment tables
-        for segment in self.segment_by_name.values():
-            if type(segment) == SegmentTable:
-                segment.assign_coordinates()
+        for descriptor in self.descriptor_by_name.values():
+            if isinstance(descriptor, SegmentTable):
+                descriptor.assign_coordinates()
 
-        # assign coordinates to all other segments
-        for segment in self.segment_by_name.values():
-            segment.assign_coordinates()
+        # assign coordinates to all other descriptors
+        for descriptor in self.descriptor_by_name.values():
+            descriptor.assign_coordinates()
 
         # if segment has a preassigned base address, write it
-        for segment in self.segment_by_name.values():
-            if segment.phys_addr is not None:
-                segment.write_to_image()
+        for descriptor in self.descriptor_by_name.values():
+            if isinstance(descriptor, Segment):
+                if descriptor.phys_addr is not None:
+                    descriptor.write_to_image()
 
         # write all other segments
-        for segment in self.segment_by_name.values():
-            segment.write_to_image()
+        for descriptor in self.descriptor_by_name.values():
+            if isinstance(descriptor, Segment):
+                descriptor.write_to_image()
 
 
 if __name__ == '__main__':
@@ -227,4 +256,4 @@ if __name__ == '__main__':
     args.image[0].close()
     image = Image(arch, image_tree)
 
-    print '%d segments in image' % len(image.segment_by_name)
+    print '%d segments in image' % len(image.descriptor_by_name)
