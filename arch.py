@@ -291,26 +291,26 @@ class Arch(object):
 
     def __init__(self, d432_tree):
         d432_root = d432_tree.getroot()
-        self.names = { }
+        self.symbols = { }
 
         for child in d432_root:
             name = child.get('name')
             if child.tag == 'instruction_set':
                 self.parse_instruction_set(child)
             elif child.tag == 'enumeration':
-                if name in self.names:
+                if name in self.symbols:
                     print "enumeration problem:", name
-                assert name not in self.names
-                self.names[name] = (child.tag, self.get_enumeration(child))
+                assert name not in self.symbols
+                self.symbols[name] = (child.tag, self.get_enumeration(child))
             elif child.tag == 'struct' or child.tag == 'union':
-                assert name not in self.names
-                self.names[name] = (child.tag, self.get_struct(child))
+                assert name not in self.symbols
+                self.symbols[name] = (child.tag, self.get_struct(child))
             elif child.tag == 'segment':
-                assert name not in self.names
+                assert name not in self.symbols
                 st = {}
                 st['base_type'] = child.get('base_type')
                 st['system_type'] = child.get('system_type')
-                self.names[name] = (child.tag, st)
+                self.symbols[name] = (child.tag, st)
 
 
 def gen_operator_h(arch, f):
