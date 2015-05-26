@@ -9,7 +9,11 @@ import sys
 import xml.etree.ElementTree
 
 class arch(object):
-    segment_base_type_names = frozenset(('data_segment', 'access_segment'))
+    symbol_t = collections.namedtuple('symbol_t', ['type',
+                                                   'value'])
+
+    segment_t = collections.namedtuple('segment_t', ['base_type',
+                                                     'system_type'])
 
     size_value_t = collections.namedtuple('size_value_t', ['size',
                                                            'value'])
@@ -116,8 +120,23 @@ class arch(object):
                 bin_entries [j] = v
         return bin_entries
     
+    def is_enumeration_element(self, enum_name, enum_item_name):
+        if enum_name not in self.symbols:
+            return False
+        et = self.symbols[enum_name]
+        if et.type != 'enumeration':
+            return False
+        return enum_item_name in et.value
+        
 
-    def get_enumeration(self, ee):
+    def get_enumeration_value(self, enum_name, enum_item_name):
+        assert enum_name in self.symbols
+        et = self.symbols[enum_name]
+        assert et.type == 'enumeration'
+        assert enum_item_name in et.value
+        return et.value[enum_item_name]
+
+    def parse_enumeration(self, ee):
         size = ee.get('size')
         if size == 'var':
             size = 0
@@ -300,16 +319,24 @@ class arch(object):
                 if name in self.symbols:
                     print "enumeration problem:", name
                 assert name not in self.symbols
-                self.symbols[name] = (child.tag, self.get_enumeration(child))
+                self.symbols[name] = self.symbol_t(child.tag,
+                                                   self.parse_enumeration(child))
             elif child.tag == 'struct' or child.tag == 'union':
                 assert name not in self.symbols
-                self.symbols[name] = (child.tag, self.get_struct(child))
+                self.symbols[name] = self.symbol_t(child.tag,
+                                                   self.get_struct(child))
             elif child.tag == 'segment':
                 assert name not in self.symbols
-                st = {}
-                st['base_type'] = child.get('base_type')
-                st['system_type'] = child.get('system_type')
-                self.symbols[name] = (child.tag, st)
+
+                base_type = child.get('base_type')
+                assert self.is_enumeration_element('base_type', base_type)
+
+                system_type = child.get('system_type')
+                assert self.is_enumeration_element('system_type', system_type)
+
+                self.symbols[name] = self.symbol_t(child.tag,
+                                                   self.segment_t(base_type,
+                                                                  system_type))
 
 
 def gen_operator_h(arch, f):

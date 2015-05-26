@@ -298,7 +298,7 @@
     <ad_slot name="carried_object"       value="processor_1_processor_access_segment"/>
   </segment>
 
-  <segment name="processor_1_diagnostic_port_processor_carrier_data_segment" type="carrier_data_segment">
+  <segment name="processor_1_reconfiguration_port_processor_carrier_data_segment" type="carrier_data_segment">
     <field name="carrier_status">
       <field name="carried_object_type" value="processor"/>
     </field>
@@ -492,7 +492,7 @@
     </field>
   </segment>
 
-  <segment name="program_1_root_instruction_data_segment" type="instruction_data_segment">
+  <segment name="program_1_fault_instruction_data_segment" type="instruction_data_segment">
     <field name="context_access_segment_length" value="12"/>
     <field name="context_data_segment_length" value="8"/>
     <field name="operand_stack_segment_length" value="32"/>
