@@ -43,6 +43,7 @@ class Allocation(object):
 
 
 class Field(object):
+    # a factory method
     @staticmethod
     def parse(segment, field_tree):
         d = { 'ad': AD,
@@ -76,6 +77,7 @@ class AD(Field):
         
     def __init__(self, segment, ad_tree):
         assert segment.base_type == 'access_segment'
+        assert len(ad_tree) == 0
         super(AD, self).__init__(segment, ad_tree)
         self.size = 4
 
