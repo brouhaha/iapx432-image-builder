@@ -74,6 +74,16 @@ class AD(Field):
 
     def _get_rights(self, ad_tree, right, default = True):
         return self._rights_dict.get(ad_tree.get(right), default)
+
+    def _parse_rights(self, segment, ad_tree):
+        self.valid      =  self._get_rights(ad_tree, 'valid',  default = self.segment_name is not None)
+        self.write      =  self._get_rights(ad_tree, 'write',  default = True)
+        self.read       =  self._get_rights(ad_tree, 'read',   default = True)
+        self.heap       =  self._get_rights(ad_tree, 'heap',   default = False)
+        self.delete     =  self._get_rights(ad_tree, 'delete', default = True)
+        self.sys_rights = [self._get_rights(ad_tree, 'sys1',   default = False),
+                           self._get_rights(ad_tree, 'sys2',   default = False),
+                           self._get_rights(ad_tree, 'sys3',   default = False)]
         
     def __init__(self, segment, ad_tree):
         assert segment.base_type == 'access_segment'
@@ -83,14 +93,7 @@ class AD(Field):
 
         self.segment_name = ad_tree.get('segment')
 
-        self.valid      =  self._get_rights(ad_tree, 'valid',  default = self.segment_name is not None)
-        self.write      =  self._get_rights(ad_tree, 'write',  default = True)
-        self.read       =  self._get_rights(ad_tree, 'read',   default = True)
-        self.heap       =  self._get_rights(ad_tree, 'heap',   default = False)
-        self.delete     =  self._get_rights(ad_tree, 'delete', default = True)
-        self.sys_rights = [self._get_rights(ad_tree, 'sys1',   default = False),
-                           self._get_rights(ad_tree, 'sys2',   default = False),
-                           self._get_rights(ad_tree, 'sys3',   default = False)]
+        self._parse_rights(segment, ad_tree)
 
         self.dir_index = None
         self.seg_index = None
@@ -118,12 +121,21 @@ class DataField(Field):
         pass
 
 
-# XXX add a factory method parse()
 class Descriptor(object):
+    # a factory method
+    @staticmethod
+    def parse(image, tree):
+        d = { 'segment': Segment,
+              'refinement': Refinement,
+              'extended_type': ExtendedType }
+        name = tree.get('name')
+        assert name not in image.descriptor_by_name
+        return d[tree.tag](image, tree)
+
     def __init__(self, image, tree):
+        self.name = tree.get('name')
         self.image = image
         self.arch = image.arch
-        self.name = tree.get('name')
 
     def _set_dir_index(self, dir_index):
         if self.dir_index is not None:
@@ -152,6 +164,16 @@ class Descriptor(object):
 
 
 class Segment(Descriptor):
+    # a factory method
+    @staticmethod
+    def parse(image, tree):
+        d = { 'access_segment': AccessSegment,
+              'data_segment' : DataSegment }
+        segment_type = tree.get('type')
+        assert segment_type in image.arch.symbols
+        st = image.arch.symbols[segment_type]
+        d[st.base_type](image, tree)
+
     def __init__(self, image, segment_tree):
         super(Segment, self).__init__(image, segment_tree)
         self.segment_type = segment_tree.get('type')
@@ -175,7 +197,6 @@ class Segment(Descriptor):
         self.fields = []
         for field_tree in segment_tree:
             self.fields.append(Field.parse(self, field_tree))
-        print "%d fields" % len(self.fields)
 
     def compute_size(self):
         offset = 0
@@ -209,16 +230,40 @@ class Segment(Descriptor):
 
 
 class AccessSegment(Segment):
+    # a factory method
+    @staticmethod
+    def parse(image, tree):
+        return AccessSegment(image, tree)
+    
     def __init__(self, image, segment_tree):
         super(AccessSegment, self).__init__(image, segment_tree)
 
 
 class DataSegment(Segment):
+    # a factory method
+    @staticmethod
+    def parse(image, tree):
+        segment_type = tree.get('type')
+        assert segment_type in image.arch.symbols
+        st = image.arch.symbols[segment_type]
+        if st.system_type == 'object_table':
+            return SegmentTable(image, tree)
+        else:
+            return DataSegment(image, tree)
+
     def __init__(self, image, segment_tree):
         super(DataSegment, self).__init__(image, segment_tree)
 
 
 class SegmentTable(DataSegment):
+    # a factory method
+    @staticmethod
+    def parse(image, tree):
+        if tree.get('name') == tree.get('object_table'):
+            return SegmentTableDirectory(image, tree)
+        else:
+            return SegmentTable(image, tree)
+
     def __init__(self, image, segment_tree):
         super(SegmentTable, self).__init__(image, segment_tree)
         self._index_allocation = Allocation(4096)
@@ -226,22 +271,36 @@ class SegmentTable(DataSegment):
 
 class SegmentTableDirectory(SegmentTable):
     def __init__(self, image, segment_tree):
+        assert image.segment_table_directory is None
         super(SegmentTableDirectory, self).__init__(image, segment_tree)
         self.seg_index = 2
         if self.phys_addr is None:
             self.phys_addr = 0  # address of segment prefix
         else:
             assert self.phys_addr == 0
+        image.segment_table_directory = self
 
 
 class Refinement(Descriptor):
+    # a factory method
+    @staticmethod
+    def parse(image, tree):
+        return Refinement(image, tree)
+
     def __init__(self, image, descriptor_tree):
         super(Refinement, self).__init__(image, descriptor_tree)
+        # XXX
 
 
 class ExtendedType(Descriptor):
+    # a factory method
+    @staticmethod
+    def parse(image, tree):
+        return ExtendedType(image, tree)
+
     def __init__(self, image, descriptor_tree):
         super(Refinement, self).__init__(image, descriptor_tree)
+        # XXX
 
 
 class Image(object):
@@ -249,34 +308,6 @@ class Image(object):
         def __init__(self, descriptor_tree):
             print descriptor_tree
             self.msg = 'invalid descriptor type "%s"' % descriptor_tree.tag
-
-    # XXX convert to a Descriptor factory staticmethod
-    def parse_descriptor(self, descriptor_tree):
-        descriptor_type = descriptor_tree.tag
-        descriptor_name = descriptor_tree.get('name')
-        assert descriptor_name not in self.descriptor_by_name
-        if descriptor_type == 'segment':
-            segment_type = descriptor_tree.get('type')
-            object_table_name = descriptor_tree.get('object_table')
-            if segment_type == 'object_table_data_segment':
-                if descriptor_name == object_table_name:
-                    assert self.segment_table_directory is None
-                    segment = SegmentTableDirectory(self, descriptor_tree)
-                    self.segment_table_directory = segment
-                else:
-                    segment = SegmentTable(self, descriptor_tree)
-            else:
-                segment = Segment(self, descriptor_tree)
-            self.descriptor_by_name[descriptor_name] = segment
-        elif descriptor_type == 'refinement':
-            refinement = Refinement(self, descriptor_tree)
-            self.descriptor_by_name[descriptor_name] = refinement
-        elif descriptor_type == 'extended_type':
-            extended_type = ExtendedType(self, descriptor_tree)
-            self.descriptor_by_name[descriptor_name] = extended_type
-        else:
-            raise self.InvalidDescriptorType(descriptor_tree)
-        print "%s '%s'" % (descriptor_type, descriptor_name)
 
     def __init__(self, arch, image_tree):
         self.arch = arch
@@ -287,7 +318,9 @@ class Image(object):
         self.segment_table_directory = None
 
         for descriptor_tree in image_root:
-            self.parse_descriptor(descriptor_tree)
+            name = descriptor_tree.get('name')
+            assert name not in self.descriptor_by_name
+            self.descriptor_by_name[name] = Descriptor.parse(self, descriptor_tree)
 
         # compute sizes of all segments
         for descriptor in self.descriptor_by_name.values():
