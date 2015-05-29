@@ -54,7 +54,8 @@ class Field(object):
         self.segment = segment
         self.image = segment.image
         self.arch = self.image.arch
-        self.name = field_tree.get('name')
+        if field_tree is not None:
+            self.name = field_tree.get('name')
         self.size = None
         self.offset = None
         # XXX
@@ -121,14 +122,15 @@ class AD(Field):
 
     def write_value(self):
         if self.valid:
+            if self.segment_name not in self.image.descriptor_by_name:
+                print "can't find segment", self.segment_name
+            assert self.segment_name in self.image.descriptor_by_name
+            descriptor = self.image.descriptor_by_name[self.segment_name]
             if self.dir_index is None:
-                if self.segment_name not in self.image.descriptor_by_name:
-                    print "can't find segment", self.segment_name
-                assert self.segment_name in self.image.descriptor_by_name
-                segment = self.image.descriptor_by_name[self.segment_name]
-                self.dir_index = segment.dir_index
-                self.seg_index = segment.seg_index
+                self.dir_index = descriptor.dir_index
+                self.seg_index = descriptor.seg_index
             # XXX write value
+            descriptor.reference_count += 1
             pass
         else:
             # XXX write zeros
@@ -140,10 +142,41 @@ class DataField(Field):
         super(DataField, self).__init__(segment, field_tree)
 
     def write_value(self):
-        # XXX
-        pass
+        pass # XXX
+
+class ObjectTableEntry(Field):
+    def __init__(self, segment):
+        super(ObjectTableEntry, self).__init__(segment, None)
+        self.size = 16
+
+    def write_value(self):
+        pass # XXX
+
+class ObjectTableHeader(ObjectTableEntry):
+    def __init__(self, segment):
+        super(ObjectTableHeader, self).__init__(segment)
+        self.offset = 0
+
+class StorageDescriptor(ObjectTableEntry):
+    def __init__(self, segment, descriptor, index):
+        super(StorageDescriptor, self).__init__(segment)
+        self.descriptor = descriptor
+        self.offset = index * 16
+
+class RefinementDescriptor(ObjectTableEntry):
+    def __init__(self, segment, descriptor, index):
+        super(RefinementDescriptor, self).__init__(segment)
+        self.descriptor = descriptor
+        self.offset = index * 16
+
+class InterconnectDescriptor(ObjectTableEntry):
+    def __init__(self, segment, descriptor, index):
+        super(InterconnectDescriptor, self).__init__(segment)
+        self.descriptor = descriptor
+        self.offset = index * 16
 
 
+# XXX change "Desciptor" to "Object"
 class Descriptor(object):
     # a factory method
     @staticmethod
@@ -161,6 +194,7 @@ class Descriptor(object):
         self.arch = image.arch
         self.dir_index = None
         self.seg_index = None
+        self.reference_count = 0
 
         self.object_table = tree.get('object_table')
 
@@ -174,8 +208,8 @@ class Descriptor(object):
         #print "descr", self.name, "assigned", coord
         assert coord not in self.image.descriptor_by_coord
         self.image.descriptor_by_coord[coord] = self
-        dir = self.image.descriptor_by_coord[(2, self.dir_index)]
-        dir.allocate_index(self.seg_index)
+        seg_table = self.image.descriptor_by_coord[(2, self.dir_index)]
+        seg_table.allocate_index(self, self.seg_index)
         
 
     def _set_dir_index(self, dir_index):
@@ -224,7 +258,8 @@ class Descriptor(object):
             #print "allocating a segment table entry"
             dir = self.image.descriptor_by_coord[(2, self.dir_index)]
             #print "dir", dir
-            self._set_seg_index(dir.allocate_index())
+            seg_index = dir.allocate_index() # finds an index but doesn't allocate
+            self._set_seg_index(seg_index)   # actually allocates it
         #print "assigned dir_index", self.dir_index, "seg_index", self.seg_index
 
 
@@ -331,14 +366,21 @@ class SegmentTable(DataSegment):
 
     def __init__(self, image, segment_tree):
         super(SegmentTable, self).__init__(image, segment_tree)
-        self.index_allocation = Allocation(4096)
-        self.index_allocation.allocate(pos=0, fixed=True)
         self._set_dir_index(2)
+        self.index_allocation = Allocation(4096)
 
-    def allocate_index(self, index=None):
+        self.allocate_index(0) # object table header
+        object_table_header = ObjectTableHeader(self)
+        self.fields.append(object_table_header)
+
+    def allocate_index(self, descriptor=None, index=None):
         if index is None:
             return self.index_allocation.allocate(dry_run=True)
         else:
+            # XXX following needs to handle other kinds of descriptors,
+            #     based on object type
+            object_table_entry = StorageDescriptor(self, descriptor, index)
+            self.fields.append(object_table_entry)
             return self.index_allocation.allocate(pos=index, fixed=True)
 
 class SegmentTableDirectory(SegmentTable):
@@ -462,3 +504,7 @@ if __name__ == '__main__':
         for k in sorted(image.descriptor_by_coord.keys()):
             d = image.descriptor_by_coord[k]
             print k, d.name
+
+    for descriptor in image.descriptor_by_name.values():
+        if descriptor.reference_count == 0:
+            print "no AD references", descriptor.name
