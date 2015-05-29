@@ -122,15 +122,15 @@ class AD(Field):
 
     def write_value(self):
         if self.valid:
-            if self.segment_name not in self.image.descriptor_by_name:
+            if self.segment_name not in self.image.object_by_name:
                 print "can't find segment", self.segment_name
-            assert self.segment_name in self.image.descriptor_by_name
-            descriptor = self.image.descriptor_by_name[self.segment_name]
+            assert self.segment_name in self.image.object_by_name
+            obj = self.image.object_by_name[self.segment_name]
             if self.dir_index is None:
-                self.dir_index = descriptor.dir_index
-                self.seg_index = descriptor.seg_index
+                self.dir_index = obj.dir_index
+                self.seg_index = obj.seg_index
             # XXX write value
-            descriptor.reference_count += 1
+            obj.reference_count += 1
             pass
         else:
             # XXX write zeros
@@ -158,26 +158,25 @@ class ObjectTableHeader(ObjectTableEntry):
         self.offset = 0
 
 class StorageDescriptor(ObjectTableEntry):
-    def __init__(self, segment, descriptor, index):
+    def __init__(self, segment, obj, index):
         super(StorageDescriptor, self).__init__(segment)
-        self.descriptor = descriptor
+        self.obj = obj
         self.offset = index * 16
 
 class RefinementDescriptor(ObjectTableEntry):
-    def __init__(self, segment, descriptor, index):
+    def __init__(self, segment, obj, index):
         super(RefinementDescriptor, self).__init__(segment)
-        self.descriptor = descriptor
+        self.obj = obj
         self.offset = index * 16
 
 class InterconnectDescriptor(ObjectTableEntry):
-    def __init__(self, segment, descriptor, index):
+    def __init__(self, segment, obj, index):
         super(InterconnectDescriptor, self).__init__(segment)
-        self.descriptor = descriptor
+        self.obj = obj
         self.offset = index * 16
 
 
-# XXX change "Desciptor" to "Object"
-class Descriptor(object):
+class Object(object):
     # a factory method
     @staticmethod
     def parse(image, tree):
@@ -185,7 +184,7 @@ class Descriptor(object):
               'refinement': Refinement,
               'extended_type': ExtendedType }
         name = tree.get('name')
-        assert name not in image.descriptor_by_name
+        assert name not in image.object_by_name
         return d[tree.tag].parse(image, tree)
 
     def __init__(self, image, tree):
@@ -206,9 +205,9 @@ class Descriptor(object):
     def _mark_coord(self):
         coord = (self.dir_index, self.seg_index)
         #print "descr", self.name, "assigned", coord
-        assert coord not in self.image.descriptor_by_coord
-        self.image.descriptor_by_coord[coord] = self
-        seg_table = self.image.descriptor_by_coord[(2, self.dir_index)]
+        assert coord not in self.image.object_by_coord
+        self.image.object_by_coord[coord] = self
+        seg_table = self.image.object_by_coord[(2, self.dir_index)]
         seg_table.allocate_index(self, self.seg_index)
         
 
@@ -244,8 +243,8 @@ class Descriptor(object):
         #print "assigning coordinates for", self.name
         if self.object_table:
             #print "looking up object table", self.object_table
-            assert self.object_table in self.image.descriptor_by_name
-            object_table = self.image.descriptor_by_name[self.object_table]
+            assert self.object_table in self.image.object_by_name
+            object_table = self.image.object_by_name[self.object_table]
             dir_index = object_table.seg_index
             #if dir_index is None:
             #    print "recursively assigning coordinates"
@@ -256,14 +255,14 @@ class Descriptor(object):
         assert self.dir_index is not None
         if self.seg_index is None:
             #print "allocating a segment table entry"
-            dir = self.image.descriptor_by_coord[(2, self.dir_index)]
+            dir = self.image.object_by_coord[(2, self.dir_index)]
             #print "dir", dir
             seg_index = dir.allocate_index() # finds an index but doesn't allocate
             self._set_seg_index(seg_index)   # actually allocates it
         #print "assigned dir_index", self.dir_index, "seg_index", self.seg_index
 
 
-class Segment(Descriptor):
+class Segment(Object):
     # a factory method
     @staticmethod
     def parse(image, tree):
@@ -373,13 +372,13 @@ class SegmentTable(DataSegment):
         object_table_header = ObjectTableHeader(self)
         self.fields.append(object_table_header)
 
-    def allocate_index(self, descriptor=None, index=None):
+    def allocate_index(self, obj=None, index=None):
         if index is None:
             return self.index_allocation.allocate(dry_run=True)
         else:
-            # XXX following needs to handle other kinds of descriptors,
+            # XXX following needs to handle other kinds of objects,
             #     based on object type
-            object_table_entry = StorageDescriptor(self, descriptor, index)
+            object_table_entry = StorageDescriptor(self, obj, index)
             self.fields.append(object_table_entry)
             return self.index_allocation.allocate(pos=index, fixed=True)
 
@@ -401,78 +400,77 @@ class InstructionSegment(Segment):
     
 
 
-class Refinement(Descriptor):
+class Refinement(Object):
     # a factory method
     @staticmethod
     def parse(image, tree):
         return Refinement(image, tree)
 
-    def __init__(self, image, descriptor_tree):
-        super(Refinement, self).__init__(image, descriptor_tree)
+    def __init__(self, image, tree):
+        super(Refinement, self).__init__(image, tree)
         # XXX
 
 
-class ExtendedType(Descriptor):
+class ExtendedType(Object):
     # a factory method
     @staticmethod
     def parse(image, tree):
         return ExtendedType(image, tree)
 
-    def __init__(self, image, descriptor_tree):
-        super(Refinement, self).__init__(image, descriptor_tree)
+    def __init__(self, image, tree):
+        super(Refinement, self).__init__(image, tree)
         # XXX
 
 
 class Image(object):
-    class InvalidDescriptorTypeError(Exception):
-        def __init__(self, descriptor_tree):
-            print descriptor_tree
-            self.msg = 'invalid descriptor type "%s"' % descriptor_tree.tag
+    class InvalidObjectTypeError(Exception):
+        def __init__(self, tree):
+            self.msg = 'invalid object type "%s"' % tree.tag
 
     def __init__(self, arch, image_tree):
         self.arch = arch
         image_root = image_tree.getroot()
         assert image_root.tag == 'image'
-        self.descriptor_by_coord = { }
-        self.descriptor_by_name = { }
+        self.object_by_coord = { }
+        self.object_by_name = { }
         self.segment_table_directory = None
 
-        for descriptor_tree in image_root:
-            name = descriptor_tree.get('name')
-            assert name not in self.descriptor_by_name
-            self.descriptor_by_name[name] = Descriptor.parse(self, descriptor_tree)
+        for obj_tree in image_root:
+            name = obj_tree.get('name')
+            assert name not in self.object_by_name
+            self.object_by_name[name] = Object.parse(self, obj_tree)
 
         # compute sizes of all segments
         print "computing sizes of segments"
-        for descriptor in self.descriptor_by_name.values():
-            if isinstance(descriptor, Segment):
-                descriptor.compute_size()
+        for obj in self.object_by_name.values():
+            if isinstance(obj, Segment):
+                obj.compute_size()
 
         # assign coordinates to all segment tables
         # XXX would be nice to process in order they're declared,
         #     which would require adding a list
         print "assigning coordinates of segment tables"
-        for descriptor in self.descriptor_by_name.values():
-            if isinstance(descriptor, SegmentTable):
-                descriptor.assign_coordinates()
+        for obj in self.object_by_name.values():
+            if isinstance(obj, SegmentTable):
+                obj.assign_coordinates()
 
-        # assign coordinates to all other descriptors
+        # assign coordinates to all other objects
         # XXX would be nice to process in order they're declared,
         #     which would require adding a list
-        print "assigning coordinates of other descriptors"
-        for descriptor in self.descriptor_by_name.values():
-            descriptor.assign_coordinates()
+        print "assigning coordinates of other objects"
+        for obj in self.object_by_name.values():
+            obj.assign_coordinates()
 
         # if segment has a preassigned base address, write it
-        for descriptor in self.descriptor_by_name.values():
-            if isinstance(descriptor, Segment):
-                if descriptor.phys_addr is not None:
-                    descriptor.write_to_image()
+        for obj in self.object_by_name.values():
+            if isinstance(obj, Segment):
+                if obj.phys_addr is not None:
+                    obj.write_to_image()
 
         # write all other segments
-        for descriptor in self.descriptor_by_name.values():
-            if isinstance(descriptor, Segment):
-                descriptor.write_to_image()
+        for obj in self.object_by_name.values():
+            if isinstance(obj, Segment):
+                obj.write_to_image()
 
 
 if __name__ == '__main__':
@@ -498,13 +496,13 @@ if __name__ == '__main__':
     args.image[0].close()
     image = Image(arch, image_tree)
 
-    print '%d segments in image' % len(image.descriptor_by_name)
+    print '%d segments in image' % len(image.object_by_name)
 
     if args.list_segments:
-        for k in sorted(image.descriptor_by_coord.keys()):
-            d = image.descriptor_by_coord[k]
+        for k in sorted(image.object_by_coord.keys()):
+            d = image.object_by_coord[k]
             print k, d.name
 
-    for descriptor in image.descriptor_by_name.values():
-        if descriptor.reference_count == 0:
-            print "no AD references", descriptor.name
+    for obj in image.object_by_name.values():
+        if obj.reference_count == 0:
+            print "no AD references", obj.name
