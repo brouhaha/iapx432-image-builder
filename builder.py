@@ -3,7 +3,6 @@
 # Copyright 2014, 2015 Eric Smith <spacewar@gmail.com>
 
 import argparse
-import collections
 import pprint
 import re
 import sys
@@ -16,42 +15,99 @@ class Allocation(object):
     # This could be eight times as storage-efficient, at a substantial
     # increase in complexity, by storing eight bits per byte instead
     # of only one.
-    _z = bytearray([0])  # in Python 3, this could be a bytes object
     
     def __init__(self, size):
         self._v = bytearray(size)
+        self._z = bytearray(size)  # in Python 3, this could be a bytes object
 
     def __str__(self):
         return ' '.join(["%d" % b for b in self._v])
 
-    def allocate(self, pos=None, size=1, subsequent=False):
+    def allocate(self, size=1, pos=None, fixed=False, dry_run=False):
         if pos is None:
-            pos = self._v.find(self._z)
+            assert fixed == False
+            pos = self._v.find(self._z[:size])
             assert pos != -1
-        elif subsequent:
-            pos = self._v.find(self._z, pos)
+        elif not fixed:
+            pos = self._v.find(self._z[:size], pos)
             assert pos != -1
         assert self._v[pos] == 0
-        self._v[pos] = 1
+        if not dry_run:
+            self._v[pos:pos+size] = [1] * size
         return pos
 
-    def lowest_available(self):
+    def lowest_available(self, size=1):
         pos = self._v.find(self._z)
         assert pos != -1
         return pos
 
 
 class Field(object):
-    def __init__(self, image, field_tree):
-        self.image = image
-        self.arch = image.arch
+    def __init__(self, segment, field_tree):
+        self.segment = segment
+        self.image = segment.image
+        self.arch = self.image.arch
+        self.name = field_tree.get('name')
         self.size = None
         self.offset = None
         # XXX
 
     def compute_size(self):
+        if self.size is None:
+            # XXX hack:
+            self.size = 4
+        return self.size
+
+
+class AD(Field):
+    _rights_dict = { 'true': True,
+                     '1': True,
+                     'false': False,
+                     '0': False }
+
+    def _get_rights(self, ad_tree, right, default = True):
+        return self._rights_dict.get(ad_tree.get(right), default)
+        
+    def __init__(self, segment, ad_tree):
+        assert ad_tree.tag == 'ad'
+        super(AD, self).__init__(segment, ad_tree)
+        self.size = 4
+
+        self.segment_name = ad_tree.get('segment')
+
+        self.valid      =  self._get_rights(ad_tree, 'valid',  default = self.segment_name is not None)
+        self.write      =  self._get_rights(ad_tree, 'write',  default = True)
+        self.read       =  self._get_rights(ad_tree, 'read',   default = True)
+        self.heap       =  self._get_rights(ad_tree, 'heap',   default = False)
+        self.delete     =  self._get_rights(ad_tree, 'delete', default = True)
+        self.sys_rights = [self._get_rights(ad_tree, 'sys1',   default = False),
+                           self._get_rights(ad_tree, 'sys2',   default = False),
+                           self._get_rights(ad_tree, 'sys3',   default = False)]
+
+        self.dir_index = None
+        self.seg_index = None
+
+    def write_value(self):
+        if self.valid:
+            if self.dir_index is None:
+                assert self.segment_name in self.image.descriptor_by_name
+                segment = self.image.descriptor_by_name[self.segment_name]
+                self.dir_index = segment.dir_index
+                self.seg_index = segment.seg_index
+            # XXX write value
+            pass
+        else:
+            # XXX write zeros
+            pass
+
+class DataField(Field):
+    def __init__(self, segment, field_tree):
+        assert field_tree.tag == 'field'
+        super(DataField, self).__init__(segment, field_tree)
+
+    def write_value(self):
         # XXX
-        return 0
+        pass
 
 
 class Descriptor(object):
@@ -100,7 +156,7 @@ class Segment(Descriptor):
         self.phys_addr = None
         self.size = None
 
-        #self.min_size = segment_tree.get('min_size')
+        self.min_size = segment_tree.get('min_size')
         #self.phys_addr = segment_tree.get('phys_addr')  # address of segment prefix
         self.dir_index = None
         self.seg_index = None
@@ -109,33 +165,43 @@ class Segment(Descriptor):
 
         self.fields = []
         for field_tree in segment_tree:
-            self.fields.append(Field(self.image, field_tree))
+            assert field_tree.tag in frozenset(['ad', 'field'])
+            if field_tree.tag == 'ad':
+                assert self.base_type == 'access_segment'
+                self.fields.append(AD(self, field_tree))
+            elif field_tree.tag == 'field':
+                assert self.base_type == 'data_segment'
+                self.fields.append(DataField(self, field_tree))
         print "%d fields" % len(self.fields)
 
     def compute_size(self):
+        offset = 0
         self.data = bytearray(65536)
         self.allocation = Allocation(65536)
 
         for field in self.fields:
             field.compute_size()
+            # hack - we really need the sizes computed!
+            if field.size is None:
+                field.size = 4
 
-        # first handle any fields at known offsets
         for field in self.fields:
             if field.offset is not None:
-                self.allocation.allocate(pos = field.offset, size = field.size)
+                offset = field.offset
+                self.allocation.allocate(pos = field.offset, size = field.size, fixed=True)
+            else:
+                
+                field.offset = self.allocation.allocate(pos = field.offset, size = field.size)
+            offset = field.offset + field.size
 
-        # allocate remaining fields
-        for field in self.fields:
-            if field.offset is None:
-                field.offset = self.allocation.allocate(pos = 0, subsequent = True, size = field.size)
-
-        self.size = max(self.allocation.lowest_available(), self.min_size)
+        self.size = max(self.allocation.allocate(dry_run=True), self.min_size)
         return self.size
 
     def write_to_image(self):
         if self.written:
             return
-        # XXX more code needed here
+        for field in self.fields:
+            field.write_value()
         self.written = True
 
 
