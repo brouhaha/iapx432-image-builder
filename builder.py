@@ -72,19 +72,6 @@ class AD(Field):
                      'false': False,
                      '0': False }
 
-    _default_rights = { 'write' : True,
-                        'read'  : True,
-                        'heap'  : False,
-                        'delete': True,
-                        'sys1'  : False,
-                        'sys2'  : False,
-                        'sys3'  : False }
-
-    def _set_default_rights(self, segment, ad_tree):
-        for k, dv in self._default_rights.iteritems():
-            if not hasattr(self, k):
-                setattr(self, k, dv)
-        
     def _parse_name(self, k, v):
         # can have name or index, but if both, must match
         # XXX look up name to get index
@@ -98,8 +85,8 @@ class AD(Field):
         self.segment_name = v
 
     def _parse_other(self, k, v):
-        if k in self._default_rights:
-            setattr(self, k, self._bool_dict[v])
+        if k in self.rights:
+            self.rights[k] = v
         else:
             # XXX handle system rights, based on segment type of target segment
             # XXX How? we don't know the type of the target segment!
@@ -118,15 +105,19 @@ class AD(Field):
         self.segment_name = None
         self.dir_index = None
         self.seg_index = None
+        self.rights = { 'write' : True,
+                        'read'  : True,
+                        'heap'  : False,
+                        'delete': True,
+                        'sys1'  : False,
+                        'sys2'  : False,
+                        'sys3'  : False }
 
         for k, v in ad_tree.attrib.iteritems():
             d.get(k, self._parse_other)(k, v)
 
         if not hasattr(self, 'valid'):
             self.valid = self.segment_name is not None
-
-        # default any rights that weren't explicitly set
-        self._set_default_rights(segment, ad_tree)
 
     def write_value(self):
         if self.valid:
