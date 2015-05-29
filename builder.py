@@ -43,6 +43,12 @@ class Allocation(object):
 
 
 class Field(object):
+    @staticmethod
+    def parse(segment, field_tree):
+        d = { 'ad': AD,
+              'field' : DataField }
+        return d[field_tree.tag](segment, field_tree)
+
     def __init__(self, segment, field_tree):
         self.segment = segment
         self.image = segment.image
@@ -69,7 +75,7 @@ class AD(Field):
         return self._rights_dict.get(ad_tree.get(right), default)
         
     def __init__(self, segment, ad_tree):
-        assert ad_tree.tag == 'ad'
+        assert segment.base_type == 'access_segment'
         super(AD, self).__init__(segment, ad_tree)
         self.size = 4
 
@@ -102,7 +108,7 @@ class AD(Field):
 
 class DataField(Field):
     def __init__(self, segment, field_tree):
-        assert field_tree.tag == 'field'
+        assert segment.base_type == 'data_segment'
         super(DataField, self).__init__(segment, field_tree)
 
     def write_value(self):
@@ -110,6 +116,7 @@ class DataField(Field):
         pass
 
 
+# XXX add a factory method parse()
 class Descriptor(object):
     def __init__(self, image, tree):
         self.image = image
@@ -165,13 +172,7 @@ class Segment(Descriptor):
 
         self.fields = []
         for field_tree in segment_tree:
-            assert field_tree.tag in frozenset(['ad', 'field'])
-            if field_tree.tag == 'ad':
-                assert self.base_type == 'access_segment'
-                self.fields.append(AD(self, field_tree))
-            elif field_tree.tag == 'field':
-                assert self.base_type == 'data_segment'
-                self.fields.append(DataField(self, field_tree))
+            self.fields.append(Field.parse(self, field_tree))
         print "%d fields" % len(self.fields)
 
     def compute_size(self):
@@ -205,7 +206,17 @@ class Segment(Descriptor):
         self.written = True
 
 
-class SegmentTable(Segment):
+class AccessSegment(Segment):
+    def __init__(self, image, segment_tree):
+        super(AccessSegment, self).__init__(image, segment_tree)
+
+
+class DataSegment(Segment):
+    def __init__(self, image, segment_tree):
+        super(DataSegment, self).__init__(image, segment_tree)
+
+
+class SegmentTable(DataSegment):
     def __init__(self, image, segment_tree):
         super(SegmentTable, self).__init__(image, segment_tree)
         self._index_allocation = Allocation(4096)
@@ -237,6 +248,7 @@ class Image(object):
             print descriptor_tree
             self.msg = 'invalid descriptor type "%s"' % descriptor_tree.tag
 
+    # XXX convert to a Descriptor factory staticmethod
     def parse_descriptor(self, descriptor_tree):
         descriptor_type = descriptor_tree.tag
         descriptor_name = descriptor_tree.get('name')
