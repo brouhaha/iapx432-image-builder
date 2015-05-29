@@ -3,7 +3,7 @@
 
 <image>
 
-  <segment name="object_table_directory" type="object_table_data_segment" dir_index="2" seg_index="2" phys_addr="0" reserve="32">  <!-- phys_addr is of 8-byte segment prefix -->
+  <segment name="object_table_directory" type="object_table_data_segment" object_table="object_table_directory" reserve="32">  <!-- phys_addr is of 8-byte segment prefix -->
     <!-- delete contents, make automatic -->
     <field type="object_table_header"/>
     <field type="storage_descriptor" segment="processor_object_table" index="1"/>
@@ -158,7 +158,7 @@
   </segment>
 
   <segment name="alarm_dispatch_port_access_segment" type="port_access_segment" size="64">
-    <ad name="port_data_segment" value="alarm_dispatch_port_data_segment"/>
+    <ad name="port_data_segment" segment="alarm_dispatch_port_data_segment"/>
   </segment>
 
   <segment name="reconfiguration_dispatch_port_data_segment" type="port_data_segment">
@@ -238,6 +238,25 @@
     <ad name="port_data_segment" segment="fault_port_data_segment"/>
   </segment>
 
+  <segment name="delay_port_data_segment" type="port_data_segment">
+    <field name="head_free_buffer" value="16"/>
+    <field name="head_message_in_buffer" value="0"/>
+    <field name="tail_message_in_buffer" value="0"/>
+    <field name="port_message_queue">
+      <!-- free list -->
+      <field type="port_message_queue_entry" next_entry_displacement="24"/>
+      <field type="port_message_queue_entry" next_entry_displacement="32"/>
+      <field type="port_message_queue_entry" next_entry_displacement="40"/>
+      <field type="port_message_queue_entry" next_entry_displacement="48"/>
+      <field type="port_message_queue_entry" next_entry_displacement="56"/>
+      <field type="port_message_queue_entry" next_entry_displacement="0"/>
+    </field>
+  </segment>
+
+  <segment name="delay_port_access_segment" type="port_access_segment" size="64">
+    <ad name="port_data_segment" segment="delay_port_data_segment"/>
+  </segment>
+
   <segment name="processor_1_local_communication_data_segment" type="communication_data_segment">
     <field name="processor_count" value="1"/>
     <field name="processor_id"    value="1"/>
@@ -249,20 +268,20 @@
   <segment name="processor_1_processor_access_segment" type="processor_access_segment">
     <ad name="processor_data_segment"       segment="processor_1_processor_data_segment"/>
     <ad name="current_process_carrier"/> <!-- no current process -->
-    <ad name="local_communication_segment"  value="processor_1_local_communication_data_segment"/>
-    <ad name="global_communication_segment" value="global_communication_data_segment"/>
-    <ad name="object_table_directory"       value="object_table_directory"/>
-    <ad name="processor_carrier"            value="processor_1_normal_port_processor_carrier_access_segment"/>
-    <ad name="delay_port"                   value="delay_port_access_segment"/>
-    <ad name="delay_carrier"                value="delay_carrier_access_segment"/> <!-- XXX unclear how delay_carrier is used -->
-    <ad name="normal_port"                  value="normal_dispatch_port_access_segment"/>
-    <ad name="normal_port_carrier"          value="processor_1_normal_port_processor_carrier_access_segment"/>
-    <ad name="alarm_port"                   value="alarm_dispatch_port_access_segment"/>
-    <ad name="alarm_port_carrier"           value="processor_1_alarm_port_processor_carrier_access_segment"/>
-    <ad name="reconfiguration_port"         value="reconfiguration_dispatch_port_access_segment"/>
-    <ad name="reconfiguration_port_carrier" value="processor_1_reconfiguratoion_port_processor_carrier_access_segment"/>
-    <ad name="diagnostic_port"              value="diagnostic_dispatch_port_access_segment"/>
-    <ad name="diagnostic_port_carrier"      value="processor_1_reconfiguratoion_port_processor_carrier_access_segment"/>
+    <ad name="local_communication_segment"  segment="processor_1_local_communication_data_segment"/>
+    <ad name="global_communication_segment" segment="global_communication_data_segment"/>
+    <ad name="object_table_directory"       segment="object_table_directory"/>
+    <ad name="processor_carrier"            segment="processor_1_normal_port_processor_carrier_access_segment"/>
+    <ad name="delay_port"                   segment="delay_port_access_segment"/>
+    <ad name="delay_carrier"                segment="delay_carrier_access_segment"/> <!-- XXX unclear how delay_carrier is used -->
+    <ad name="normal_port"                  segment="normal_dispatch_port_access_segment"/>
+    <ad name="normal_port_carrier"          segment="processor_1_normal_port_processor_carrier_access_segment"/>
+    <ad name="alarm_port"                   segment="alarm_dispatch_port_access_segment"/>
+    <ad name="alarm_port_carrier"           segment="processor_1_alarm_port_processor_carrier_access_segment"/>
+    <ad name="reconfiguration_port"         segment="reconfiguration_dispatch_port_access_segment"/>
+    <ad name="reconfiguration_port_carrier" segment="processor_1_reconfiguration_port_processor_carrier_access_segment"/>
+    <ad name="diagnostic_port"              segment="diagnostic_dispatch_port_access_segment"/>
+    <ad name="diagnostic_port_carrier"      segment="processor_1_reconfiguration_port_processor_carrier_access_segment"/>
   </segment>
 
   <segment name="processor_1_normal_port_processor_carrier_data_segment" type="carrier_data_segment">
@@ -272,8 +291,8 @@
   </segment>
 
   <segment name="processor_1_normal_port_processor_carrier_access_segment" type="carrier_access_segment">
-    <ad name="carrier_data_segment" value="processor_1_normal_port_processor_carrier_data_segment"/>
-    <ad name="carried_object"       value="processor_1_processor_access_segment"/>
+    <ad name="carrier_data_segment" segment="processor_1_normal_port_processor_carrier_data_segment"/>
+    <ad name="carried_object"       segment="processor_1_processor_access_segment"/>
   </segment>
 
   <segment name="processor_1_alarm_port_processor_carrier_data_segment" type="carrier_data_segment">
@@ -283,8 +302,8 @@
   </segment>
 
   <segment name="processor_1_alarm_port_processor_carrier_access_segment" type="carrier_access_segment">
-    <ad name="carrier_data_segment" value="processor_1_alarm_port_processor_carrier_data_segment"/>
-    <ad name="carried_object"       value="processor_1_processor_access_segment"/>
+    <ad name="carrier_data_segment" segment="processor_1_alarm_port_processor_carrier_data_segment"/>
+    <ad name="carried_object"       segment="processor_1_processor_access_segment"/>
   </segment>
 
   <segment name="processor_1_diagnostic_port_processor_carrier_data_segment" type="carrier_data_segment">
@@ -294,8 +313,8 @@
   </segment>
 
   <segment name="processor_1_diagnostic_port_processor_carrier_access_segment" type="carrier_access_segment">
-    <ad name="carrier_data_segment" value="processor_1_diagnostic_port_processor_carrier_data_segment"/>
-    <ad name="carried_object"       value="processor_1_processor_access_segment"/>
+    <ad name="carrier_data_segment" segment="processor_1_diagnostic_port_processor_carrier_data_segment"/>
+    <ad name="carried_object"       segment="processor_1_processor_access_segment"/>
   </segment>
 
   <segment name="processor_1_reconfiguration_port_processor_carrier_data_segment" type="carrier_data_segment">
@@ -305,22 +324,28 @@
   </segment>
 
   <segment name="processor_1_reconfiguration_port_processor_carrier_access_segment" type="carrier_access_segment">
-    <ad name="carrier_data_segment" value="processor_1_reconfiguration_port_processor_carrier_data_segment"/>
-    <ad name="carried_object"       value="processor_1_processor_access_segment"/>
+    <ad name="carrier_data_segment" segment="processor_1_reconfiguration_port_processor_carrier_data_segment"/>
+    <ad name="carried_object"       segment="processor_1_processor_access_segment"/>
+  </segment>
+
+  <segment name="delay_carrier_access_segment" type="carrier_access_segment">
+    <!-- XXX probably should be associated with the process -->
+    <ad name="carrier_data_segment"/>
+    <ad name="carried_object"/>
   </segment>
 
   <segment name="process_1_process_data_segment" type="process_data_segment">
   </segment>
 
   <segment name="process_1_process_access_segment" type="process_access_segment">
-    <ad name="process_data_segment" value="process_1_data_segment"/>
-    <ad name="current_context" value="process_1_root_context_access_segment"/>
-    <ad name="global_access_segment" value="process_1_global_access_segment"/>
-    <ad name="local_object_table" value="process_1_object_table"/>
-    <ad name="process_carrier" value="process_1_process_carrier_access_segment"/>
-    <ad name="dispatching_port" value="normal_dispatch_port_access_segment"/>
+    <ad name="process_data_segment" segment="process_1_process_data_segment"/>
+    <ad name="current_context" segment="process_1_root_context_access_segment"/>
+    <ad name="global_access_segment" segment="process_1_global_access_segment"/>
+    <ad name="local_object_table" segment="process_1_object_table"/>
+    <ad name="process_carrier" segment="process_1_process_carrier_access_segment"/>
+    <ad name="dispatching_port" segment="normal_dispatch_port_access_segment"/>
 
-    <ad name="scheduling_port" value="scheduling_port_access_segment"/>
+    <ad name="scheduling_port" segment="scheduling_port_access_segment"/>
     <!-- XXX There isn't currently anything to receive from the
          scheduling port. Ideally there would be a scheduling process
          that receives a process from that port, and sets the period
@@ -328,7 +353,7 @@
          scheduling port. The scheduling process should reset its own
          period count every time it does that. -->
 
-    <ad name="fault_port" value="fault_port_access_segment"/>
+    <ad name="fault_port" segment="fault_port_access_segment"/>
     <!-- XXX we don't have anything to receive from the fault port,
          but if the process faults we want it sent there anyhow, for
          post-mortem analysis of a memory dump -->
@@ -339,7 +364,7 @@
   </segment>
 
   <segment name="process_1_process_carrier_access_segment" type="carrier_access_segment">
-    <ad name="carrier_data_segment" value="process_1_process_carrier_data_segment"/>
+    <ad name="carrier_data_segment" segment="process_1_process_carrier_data_segment"/>
   </segment>
 
   <segment name="process_1_root_operand_stack_data_segment" type="generic_data_segment" size="8192"/>
@@ -364,10 +389,10 @@
   </segment>
 
   <segment name="process_1_root_context_access_segment" type="context_access_segment">
-    <ad name="context_data_segment"   value="process_1_root_context_data_segment"/>
-    <ad name="constants_data_segment" value="process_1_root_constants_data_segment"/>
+    <ad name="context_data_segment"   segment="process_1_root_context_data_segment"/>
+    <ad name="constants_data_segment" segment="process_1_root_constants_data_segment"/>
     <!-- don't need previous context, not going to return -->
-    <ad name="current_context"        value="process_1_root_context_access_segment"/>
+    <ad name="current_context"        segment="process_1_root_context_access_segment"/>
   </segment>
 
   <segment name="null_program_instruction_data_segment" type="instruction_data_segment">
@@ -385,7 +410,7 @@
   </segment>
 
   <segment name="null_program_domain_access_segment" type="domain_access_segment">
-    <ad index="0" value="null_program_instruction_data_segment"/>
+    <ad index="0" segment="null_program_instruction_data_segment"/>
   </segment>
 
   <segment name="program_1_root_instruction_data_segment" type="instruction_data_segment">
@@ -492,7 +517,7 @@
     </field>
   </segment>
 
-  <segment name="program_1_fault_instruction_data_segment" type="instruction_data_segment">
+  <segment name="program_1_root_fault_instruction_data_segment" type="instruction_data_segment">
     <field name="context_access_segment_length" value="12"/>
     <field name="context_data_segment_length" value="8"/>
     <field name="operand_stack_segment_length" value="32"/>
@@ -509,8 +534,8 @@
   </segment>
 
   <segment name="program_1_root_domain_access_segment" type="domain_access_segment">
-    <ad index="0" value="program_1_root_instruction_data_segment"/>
-    <ad index="1" value="program_1_root_fault_instruction_data_segment"/>
+    <ad index="0" segment="program_1_root_instruction_data_segment"/>
+    <ad index="1" segment="program_1_root_fault_instruction_data_segment"/>
   </segment>
 
 </image>

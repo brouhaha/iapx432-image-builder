@@ -67,40 +67,72 @@ class Field(object):
 
 
 class AD(Field):
-    _rights_dict = { 'true': True,
+    _bool_dict = { 'true': True,
                      '1': True,
                      'false': False,
                      '0': False }
 
-    def _get_rights(self, ad_tree, right, default = True):
-        return self._rights_dict.get(ad_tree.get(right), default)
+    _default_rights = { 'write' : True,
+                        'read'  : True,
+                        'heap'  : False,
+                        'delete': True,
+                        'sys1'  : False,
+                        'sys2'  : False,
+                        'sys3'  : False }
 
-    def _parse_rights(self, segment, ad_tree):
-        self.valid      =  self._get_rights(ad_tree, 'valid',  default = self.segment_name is not None)
-        self.write      =  self._get_rights(ad_tree, 'write',  default = True)
-        self.read       =  self._get_rights(ad_tree, 'read',   default = True)
-        self.heap       =  self._get_rights(ad_tree, 'heap',   default = False)
-        self.delete     =  self._get_rights(ad_tree, 'delete', default = True)
-        self.sys_rights = [self._get_rights(ad_tree, 'sys1',   default = False),
-                           self._get_rights(ad_tree, 'sys2',   default = False),
-                           self._get_rights(ad_tree, 'sys3',   default = False)]
+    def _set_default_rights(self, segment, ad_tree):
+        for k, dv in self._default_rights.iteritems():
+            if not hasattr(self, k):
+                setattr(self, k, dv)
         
+    def _parse_name(self, k, v):
+        # can have name or index, but if both, must match
+        # XXX look up name to get index
+        pass
+
+    def _parse_index(self, k, v):
+        # can have name or index, but if both, must match
+        pass
+
+    def _parse_segment(self, k, v):
+        self.segment_name = v
+
+    def _parse_other(self, k, v):
+        if k in self._default_rights:
+            setattr(self, k, self._bool_dict[v])
+        else:
+            # XXX handle system rights, based on segment type of target segment
+            # XXX How? we don't know the type of the target segment!
+            print "unrecognized attribute", k
+
     def __init__(self, segment, ad_tree):
+        d = { 'name': self._parse_name,
+              'index': self._parse_index,
+              'segment': self._parse_segment }
+
+        self.segment = segment
         assert segment.base_type == 'access_segment'
         assert len(ad_tree) == 0
         super(AD, self).__init__(segment, ad_tree)
         self.size = 4
-
-        self.segment_name = ad_tree.get('segment')
-
-        self._parse_rights(segment, ad_tree)
-
+        self.segment_name = None
         self.dir_index = None
         self.seg_index = None
+
+        for k, v in ad_tree.attrib.iteritems():
+            d.get(k, self._parse_other)(k, v)
+
+        if not hasattr(self, 'valid'):
+            self.valid = self.segment_name is not None
+
+        # default any rights that weren't explicitly set
+        self._set_default_rights(segment, ad_tree)
 
     def write_value(self):
         if self.valid:
             if self.dir_index is None:
+                if self.segment_name not in self.image.descriptor_by_name:
+                    print "can't find segment", self.segment_name
                 assert self.segment_name in self.image.descriptor_by_name
                 segment = self.image.descriptor_by_name[self.segment_name]
                 self.dir_index = segment.dir_index
