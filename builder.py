@@ -86,7 +86,7 @@ class AD(Field):
 
     def _parse_other(self, k, v):
         if k in self.rights:
-            self.rights[k] = v
+            self.rights[k] = self._bool_dict[v]
         else:
             # XXX handle system rights, based on segment type of target segment
             # XXX How? we don't know the type of the target segment!
