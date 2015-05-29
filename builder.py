@@ -153,37 +153,79 @@ class Descriptor(object):
               'extended_type': ExtendedType }
         name = tree.get('name')
         assert name not in image.descriptor_by_name
-        return d[tree.tag](image, tree)
+        return d[tree.tag].parse(image, tree)
 
     def __init__(self, image, tree):
         self.name = tree.get('name')
         self.image = image
         self.arch = image.arch
+        self.dir_index = None
+        self.seg_index = None
+
+        self.object_table = tree.get('object_table')
+
+        if 'dir_index' in tree.attrib:
+            self._set_dir_index(int(tree.get('dir_index')))
+        if 'seg_index' in tree.attrib:
+            self._set_seg_index(int(tree.get('seg_index')))
+
+    def _mark_coord(self):
+        coord = (self.dir_index, self.seg_index)
+        #print "descr", self.name, "assigned", coord
+        assert coord not in self.image.descriptor_by_coord
+        self.image.descriptor_by_coord[coord] = self
+        dir = self.image.descriptor_by_coord[(2, self.dir_index)]
+        dir.allocate_index(self.seg_index)
+        
 
     def _set_dir_index(self, dir_index):
+        if dir_index is None:
+            return
         if self.dir_index is not None:
             assert dir_index == self.dir_index
         else:
             self.dir_index = dir_index
             if (self.dir_index is not None and
                 self.seg_index is not None):
-                coord = (self.dir_index, self.seg_index)
-                assert coord not in self.image.descriptor_by_coord
-                self.image.descriptor_by_coord[coord] = self
+                self._mark_coord()
 
     def _set_seg_index(self, seg_index):
+        if seg_index is None:
+            return
         if self.seg_index is not None:
             assert seg_index == self.seg_index
         else:
             self.seg_index = seg_index
             if (self.dir_index is not None and
                 self.seg_index is not None):
-                coord = (self.dir_index, self.seg_index)
-                assert coord not in self.image.descriptor_by_coord
-                self.image.descriptor_by_coord[coord] = self
+                self._mark_coord()
 
     def assign_coordinates(self):
-        pass
+        if (self.dir_index is not None and
+            self.seg_index is not None):
+            if self.object_table:
+                pass  # XXX verify that object table matches coordinates
+            #print "already assigned dir_index", self.dir_index, "seg_index", self.seg_index
+            return
+        #print "assigning coordinates for", self.name
+        if self.object_table:
+            #print "looking up object table", self.object_table
+            assert self.object_table in self.image.descriptor_by_name
+            object_table = self.image.descriptor_by_name[self.object_table]
+            dir_index = object_table.seg_index
+            #if dir_index is None:
+            #    print "recursively assigning coordinates"
+            #    object_table.assign_coordinates()
+            #    dir_index = object_table.seg_index
+            #print "dir index", dir_index
+            self._set_dir_index(dir_index)
+        assert self.dir_index is not None
+        if self.seg_index is None:
+            #print "allocating a segment table entry"
+            dir = self.image.descriptor_by_coord[(2, self.dir_index)]
+            #print "dir", dir
+            self._set_seg_index(dir.allocate_index())
+        #print "assigned dir_index", self.dir_index, "seg_index", self.seg_index
 
 
 class Segment(Descriptor):
@@ -192,10 +234,11 @@ class Segment(Descriptor):
     def parse(image, tree):
         d = { 'access_segment': AccessSegment,
               'data_segment' : DataSegment }
+        name = tree.get('name')
         segment_type = tree.get('type')
         assert segment_type in image.arch.symbols
         st = image.arch.symbols[segment_type]
-        d[st.base_type](image, tree)
+        return d[st.value.base_type].parse(image, tree)
 
     def __init__(self, image, segment_tree):
         super(Segment, self).__init__(image, segment_tree)
@@ -212,8 +255,6 @@ class Segment(Descriptor):
 
         self.min_size = segment_tree.get('min_size')
         #self.phys_addr = segment_tree.get('phys_addr')  # address of segment prefix
-        self.dir_index = None
-        self.seg_index = None
 
         self.written = False
 
@@ -269,8 +310,8 @@ class DataSegment(Segment):
         segment_type = tree.get('type')
         assert segment_type in image.arch.symbols
         st = image.arch.symbols[segment_type]
-        if st.system_type == 'object_table':
-            return SegmentTable(image, tree)
+        if st.value.system_type == 'object_table':
+            return SegmentTable.parse(image, tree)
         else:
             return DataSegment(image, tree)
 
@@ -282,26 +323,40 @@ class SegmentTable(DataSegment):
     # a factory method
     @staticmethod
     def parse(image, tree):
-        if tree.get('name') == tree.get('object_table'):
+        name = tree.get('name')
+        if name == tree.get('object_table'):
             return SegmentTableDirectory(image, tree)
         else:
             return SegmentTable(image, tree)
 
     def __init__(self, image, segment_tree):
         super(SegmentTable, self).__init__(image, segment_tree)
-        self._index_allocation = Allocation(4096)
-        self.dir_index = 2
+        self.index_allocation = Allocation(4096)
+        self.index_allocation.allocate(pos=0, fixed=True)
+        self._set_dir_index(2)
+
+    def allocate_index(self, index=None):
+        if index is None:
+            return self.index_allocation.allocate(dry_run=True)
+        else:
+            return self.index_allocation.allocate(pos=index, fixed=True)
 
 class SegmentTableDirectory(SegmentTable):
     def __init__(self, image, segment_tree):
         assert image.segment_table_directory is None
         super(SegmentTableDirectory, self).__init__(image, segment_tree)
-        self.seg_index = 2
+        self._set_seg_index(2)
         if self.phys_addr is None:
             self.phys_addr = 0  # address of segment prefix
         else:
             assert self.phys_addr == 0
         image.segment_table_directory = self
+
+class InstructionSegment(Segment):
+    # XXX not yet any way to instantiate this
+    def __init__(self, image, segment_tree):
+        super(InstructionSegment, self).__init__(image, segment_tree)
+    
 
 
 class Refinement(Descriptor):
@@ -346,16 +401,19 @@ class Image(object):
             self.descriptor_by_name[name] = Descriptor.parse(self, descriptor_tree)
 
         # compute sizes of all segments
+        print "computing sizes of segments"
         for descriptor in self.descriptor_by_name.values():
             if isinstance(descriptor, Segment):
                 descriptor.compute_size()
 
         # assign coordinates to all segment tables
+        print "assigning coordinates of segment tables"
         for descriptor in self.descriptor_by_name.values():
             if isinstance(descriptor, SegmentTable):
                 descriptor.assign_coordinates()
 
         # assign coordinates to all other descriptors
+        print "assigning coordinates of other descriptors"
         for descriptor in self.descriptor_by_name.values():
             descriptor.assign_coordinates()
 
@@ -377,6 +435,8 @@ if __name__ == '__main__':
                             type=argparse.FileType('r', 0),
                             default='definitions.xml',
                             help='architecture definition (XML)')
+    arg_parser.add_argument('--list-segments',
+                            action='store_true')
     arg_parser.add_argument('image',
                             type=argparse.FileType('r', 0),
                             nargs=1,
@@ -393,3 +453,8 @@ if __name__ == '__main__':
     image = Image(arch, image_tree)
 
     print '%d segments in image' % len(image.descriptor_by_name)
+
+    if args.list_segments:
+        for k in sorted(image.descriptor_by_coord.keys()):
+            d = image.descriptor_by_coord[k]
+            print k, d.name

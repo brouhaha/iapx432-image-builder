@@ -17,7 +17,7 @@
   </segment>
   -->
 
-  <segment name="processor_table" type="object_table_data_segment" dir_index="2" seg_index="1">
+  <segment name="processor_table" type="object_table_data_segment" seg_index="1">
   <!-- XXX delete contents, make automatic -->
     <field type="object_table_header"/>
     <field type="storage_descriptor" segment="processor_1_processor_access_segment"/>
@@ -99,7 +99,7 @@
     <field type="object_table_header"/>
   </segment>
 
-  <segment name="global_sro_data_segment" type="storage_resource_data_segment">
+  <segment name="global_sro_data_segment" type="storage_resource_data_segment" object_table="system_object_table">
     <field name="beginning_block_index" value="1"/>
     <field name="current_block_index" value="1"/>
     <field name="storage_block_descriptor_area">
@@ -112,16 +112,16 @@
     </field>
   </segment>
 
-  <segment name="global_sro_access_segment" type="storage_resource_access_segment">
+  <segment name="global_sro_access_segment" type="storage_resource_access_segment" object_table="system_object_table">
     <ad name="storage_resource_data_segment" segment="global_sro_data_segment"/>
     <ad name="object_table_data_segment"     segment="dynamic_object_table"/>
   </segment>
 
-  <segment name="global_communication_data_segment" type="communication_data_segment">
+  <segment name="global_communication_data_segment" type="communication_data_segment" object_table="system_object_table">
     <field name="processor_count" value="1"/>
   </segment>
 
-  <segment name="normal_dispatch_port_data_segment" type="port_data_segment">
+  <segment name="normal_dispatch_port_data_segment" type="port_data_segment" object_table="dispatch_port_object_table">
     <field name="head_free_buffer" value="24"/>
     <field name="head_message_in_buffer" value="16"/>
     <field name="tail_message_in_buffer" value="16"/>
@@ -137,12 +137,12 @@
     </field>
   </segment>
 
-  <segment name="normal_dispatch_port_access_segment" type="port_access_segment" size="64">
+  <segment name="normal_dispatch_port_access_segment" type="port_access_segment" size="64" object_table="dispatch_port_object_table">
     <ad name="port_data_segment" segment="normal_dispatch_port_data_segment"/>
     <ad index="4"                segment="process_1_process_access_segment"/>
   </segment>
 
-  <segment name="alarm_dispatch_port_data_segment" type="port_data_segment">
+  <segment name="alarm_dispatch_port_data_segment" type="port_data_segment" object_table="dispatch_port_object_table">
     <field name="head_free_buffer" value="16"/>
     <field name="head_message_in_buffer" value="0"/>
     <field name="tail_message_in_buffer" value="0"/>
@@ -157,11 +157,11 @@
     </field>
   </segment>
 
-  <segment name="alarm_dispatch_port_access_segment" type="port_access_segment" size="64">
+  <segment name="alarm_dispatch_port_access_segment" type="port_access_segment" size="64" object_table="dispatch_port_object_table">
     <ad name="port_data_segment" segment="alarm_dispatch_port_data_segment"/>
   </segment>
 
-  <segment name="reconfiguration_dispatch_port_data_segment" type="port_data_segment">
+  <segment name="reconfiguration_dispatch_port_data_segment" type="port_data_segment" object_table="dispatch_port_object_table">
     <field name="head_free_buffer" value="16"/>
     <field name="head_message_in_buffer" value="0"/>
     <field name="tail_message_in_buffer" value="0"/>
@@ -176,11 +176,11 @@
     </field>
   </segment>
 
-  <segment name="reconfiguration_dispatch_port_access_segment" type="port_access_segment" size="64">
+  <segment name="reconfiguration_dispatch_port_access_segment" type="port_access_segment" size="64" object_table="dispatch_port_object_table">
     <ad name="port_data_segment" segment="reconfiguration_dispatch_port_data_segment"/>
   </segment>
 
-  <segment name="diagnostic_dispatch_port_data_segment" type="port_data_segment">
+  <segment name="diagnostic_dispatch_port_data_segment" type="port_data_segment" object_table="dispatch_port_object_table">
     <field name="head_free_buffer" value="16"/>
     <field name="head_message_in_buffer" value="0"/>
     <field name="tail_message_in_buffer" value="0"/>
@@ -195,11 +195,11 @@
     </field>
   </segment>
 
-  <segment name="diagnostic_dispatch_port_access_segment" type="port_access_segment" size="64">
+  <segment name="diagnostic_dispatch_port_access_segment" type="port_access_segment" size="64" object_table="dispatch_port_object_table">
     <ad name="port_data_segment" segment="diagnostic_dispatch_port_data_segment"/>
   </segment>
 
-  <segment name="scheduling_port_data_segment" type="port_data_segment">
+  <segment name="scheduling_port_data_segment" type="port_data_segment" object_table="system_object_table">
     <field name="head_free_buffer" value="24"/>
     <field name="head_message_in_buffer" value="16"/>
     <field name="tail_message_in_buffer" value="16"/>
@@ -215,11 +215,11 @@
     </field>
   </segment>
 
-  <segment name="scheduling_port_access_segment" type="port_access_segment" size="64">
+  <segment name="scheduling_port_access_segment" type="port_access_segment" size="64" object_table="system_object_table">
     <ad name="port_data_segment" segment="scheduling_port_data_segment"/>
   </segment>
 
-  <segment name="fault_port_data_segment" type="port_data_segment">
+  <segment name="fault_port_data_segment" type="port_data_segment" object_table="system_object_table">
     <field name="head_free_buffer" value="16"/>
     <field name="head_message_in_buffer" value="0"/>
     <field name="tail_message_in_buffer" value="0"/>
@@ -234,11 +234,11 @@
     </field>
   </segment>
 
-  <segment name="fault_port_access_segment" type="port_access_segment" size="64">
+  <segment name="fault_port_access_segment" type="port_access_segment" size="64" object_table="system_object_table">
     <ad name="port_data_segment" segment="fault_port_data_segment"/>
   </segment>
 
-  <segment name="delay_port_data_segment" type="port_data_segment">
+  <segment name="delay_port_data_segment" type="port_data_segment" object_table="system_object_table">
     <field name="head_free_buffer" value="16"/>
     <field name="head_message_in_buffer" value="0"/>
     <field name="tail_message_in_buffer" value="0"/>
@@ -253,19 +253,19 @@
     </field>
   </segment>
 
-  <segment name="delay_port_access_segment" type="port_access_segment" size="64">
+  <segment name="delay_port_access_segment" type="port_access_segment" size="64" object_table="system_object_table">
     <ad name="port_data_segment" segment="delay_port_data_segment"/>
   </segment>
 
-  <segment name="processor_1_local_communication_data_segment" type="communication_data_segment">
+  <segment name="processor_1_local_communication_data_segment" type="communication_data_segment" object_table="processor_1_object_table">
     <field name="processor_count" value="1"/>
     <field name="processor_id"    value="1"/>
   </segment>
 
-  <segment name="processor_1_processor_data_segment" type="processor_data_segment">
+  <segment name="processor_1_processor_data_segment" type="processor_data_segment" object_table="processor_1_object_table">
   </segment>
 
-  <segment name="processor_1_processor_access_segment" type="processor_access_segment">
+  <segment name="processor_1_processor_access_segment" type="processor_access_segment" object_table ="processor_table" seg_index="1">
     <ad name="processor_data_segment"       segment="processor_1_processor_data_segment"/>
     <ad name="current_process_carrier"/> <!-- no current process -->
     <ad name="local_communication_segment"  segment="processor_1_local_communication_data_segment"/>
@@ -284,60 +284,60 @@
     <ad name="diagnostic_port_carrier"      segment="processor_1_reconfiguration_port_processor_carrier_access_segment"/>
   </segment>
 
-  <segment name="processor_1_normal_port_processor_carrier_data_segment" type="carrier_data_segment">
+  <segment name="processor_1_normal_port_processor_carrier_data_segment" type="carrier_data_segment" object_table="processor_1_object_table">
     <field name="carrier_status">
       <field name="carried_object_type" value="processor"/>
     </field>
   </segment>
 
-  <segment name="processor_1_normal_port_processor_carrier_access_segment" type="carrier_access_segment">
+  <segment name="processor_1_normal_port_processor_carrier_access_segment" type="carrier_access_segment" object_table="processor_1_object_table">
     <ad name="carrier_data_segment" segment="processor_1_normal_port_processor_carrier_data_segment"/>
     <ad name="carried_object"       segment="processor_1_processor_access_segment"/>
   </segment>
 
-  <segment name="processor_1_alarm_port_processor_carrier_data_segment" type="carrier_data_segment">
+  <segment name="processor_1_alarm_port_processor_carrier_data_segment" type="carrier_data_segment" object_table="processor_1_object_table">
     <field name="carrier_status">
       <field name="carried_object_type" value="processor"/>
     </field>
   </segment>
 
-  <segment name="processor_1_alarm_port_processor_carrier_access_segment" type="carrier_access_segment">
+  <segment name="processor_1_alarm_port_processor_carrier_access_segment" type="carrier_access_segment" object_table="processor_1_object_table">
     <ad name="carrier_data_segment" segment="processor_1_alarm_port_processor_carrier_data_segment"/>
     <ad name="carried_object"       segment="processor_1_processor_access_segment"/>
   </segment>
 
-  <segment name="processor_1_diagnostic_port_processor_carrier_data_segment" type="carrier_data_segment">
+  <segment name="processor_1_diagnostic_port_processor_carrier_data_segment" type="carrier_data_segment" object_table="processor_1_object_table">
     <field name="carrier_status">
       <field name="carried_object_type" value="processor"/>
     </field>
   </segment>
 
-  <segment name="processor_1_diagnostic_port_processor_carrier_access_segment" type="carrier_access_segment">
+  <segment name="processor_1_diagnostic_port_processor_carrier_access_segment" type="carrier_access_segment" object_table="processor_1_object_table">
     <ad name="carrier_data_segment" segment="processor_1_diagnostic_port_processor_carrier_data_segment"/>
     <ad name="carried_object"       segment="processor_1_processor_access_segment"/>
   </segment>
 
-  <segment name="processor_1_reconfiguration_port_processor_carrier_data_segment" type="carrier_data_segment">
+  <segment name="processor_1_reconfiguration_port_processor_carrier_data_segment" type="carrier_data_segment" object_table="processor_1_object_table">
     <field name="carrier_status">
       <field name="carried_object_type" value="processor"/>
     </field>
   </segment>
 
-  <segment name="processor_1_reconfiguration_port_processor_carrier_access_segment" type="carrier_access_segment">
+  <segment name="processor_1_reconfiguration_port_processor_carrier_access_segment" type="carrier_access_segment" object_table="processor_1_object_table">
     <ad name="carrier_data_segment" segment="processor_1_reconfiguration_port_processor_carrier_data_segment"/>
     <ad name="carried_object"       segment="processor_1_processor_access_segment"/>
   </segment>
 
-  <segment name="delay_carrier_access_segment" type="carrier_access_segment">
+  <segment name="delay_carrier_access_segment" type="carrier_access_segment" object_table="process_1_object_table">
     <!-- XXX probably should be associated with the process -->
     <ad name="carrier_data_segment"/>
     <ad name="carried_object"/>
   </segment>
 
-  <segment name="process_1_process_data_segment" type="process_data_segment">
+  <segment name="process_1_process_data_segment" type="process_data_segment" object_table="process_1_object_table">
   </segment>
 
-  <segment name="process_1_process_access_segment" type="process_access_segment">
+  <segment name="process_1_process_access_segment" type="process_access_segment" object_table="process_1_object_table">
     <ad name="process_data_segment" segment="process_1_process_data_segment"/>
     <ad name="current_context" segment="process_1_root_context_access_segment"/>
     <ad name="global_access_segment" segment="process_1_global_access_segment"/>
@@ -360,16 +360,16 @@
 
   </segment>
 
-  <segment name="process_1_process_carrier_data_segment" type="carrier_data_segment">
+  <segment name="process_1_process_carrier_data_segment" type="carrier_data_segment" object_table="process_1_object_table">
   </segment>
 
-  <segment name="process_1_process_carrier_access_segment" type="carrier_access_segment">
+  <segment name="process_1_process_carrier_access_segment" type="carrier_access_segment" object_table="process_1_object_table">
     <ad name="carrier_data_segment" segment="process_1_process_carrier_data_segment"/>
   </segment>
 
-  <segment name="process_1_root_operand_stack_data_segment" type="generic_data_segment" size="8192"/>
+  <segment name="process_1_root_operand_stack_data_segment" type="generic_data_segment" size="8192" object_table="process_1_object_table"/>
 
-  <segment name="process_1_root_constants_data_segment" type="generic_data_segment">
+  <segment name="process_1_root_constants_data_segment" type="generic_data_segment" object_table="process_1_object_table">
     <field name="uart_object_selector" type="object_selector" value="uart_segment"/>
     <field name="uart_data_register_displacement" type="ordinal" value="0"/>
     <field name="uart_control_status_register_displacement" type="ordinal" value="1"/>
@@ -381,21 +381,21 @@
     <field name="last"  type="short_ordinal" value="0x5a"/>
   </segment>
 
-  <segment name="process_1_global_access_segment" type="generic_access_segment">
+  <segment name="process_1_global_access_segment" type="generic_access_segment" object_table="process_1_object_table">
   </segment>
 
-  <segment name="process_1_root_context_data_segment" type="context_data_segment">
+  <segment name="process_1_root_context_data_segment" type="context_data_segment" object_table="process_1_object_table">
     <field name="c" type="short_ordinal"/>
   </segment>
 
-  <segment name="process_1_root_context_access_segment" type="context_access_segment">
+  <segment name="process_1_root_context_access_segment" type="context_access_segment" object_table="process_1_object_table">
     <ad name="context_data_segment"   segment="process_1_root_context_data_segment"/>
     <ad name="constants_data_segment" segment="process_1_root_constants_data_segment"/>
     <!-- don't need previous context, not going to return -->
     <ad name="current_context"        segment="process_1_root_context_access_segment"/>
   </segment>
 
-  <segment name="null_program_instruction_data_segment" type="instruction_data_segment">
+  <segment name="null_program_instruction_data_segment" type="instruction_data_segment" object_table="null_program_object_table">
     <field name="context_access_segment_length" value="12"/>
     <field name="context_data_segment_length" value="8"/>
     <field name="operand_stack_segment_length" value="32"/>
@@ -409,11 +409,11 @@
     </field>
   </segment>
 
-  <segment name="null_program_domain_access_segment" type="domain_access_segment">
+  <segment name="null_program_domain_access_segment" type="domain_access_segment" object_table="null_program_object_table">
     <ad index="0" segment="null_program_instruction_data_segment"/>
   </segment>
 
-  <segment name="program_1_root_instruction_data_segment" type="instruction_data_segment">
+  <segment name="program_1_root_instruction_data_segment" type="instruction_data_segment" object_table="program_1_object_table">
     <field name="context_access_segment_length" value="12"/>
     <field name="context_data_segment_length" value="8"/>
     <field name="operand_stack_segment_length" value="32"/>
@@ -517,7 +517,7 @@
     </field>
   </segment>
 
-  <segment name="program_1_root_fault_instruction_data_segment" type="instruction_data_segment">
+  <segment name="program_1_root_fault_instruction_data_segment" type="instruction_data_segment" object_table="program_1_object_table">
     <field name="context_access_segment_length" value="12"/>
     <field name="context_data_segment_length" value="8"/>
     <field name="operand_stack_segment_length" value="32"/>
@@ -533,7 +533,7 @@
     </field>
   </segment>
 
-  <segment name="program_1_root_domain_access_segment" type="domain_access_segment">
+  <segment name="program_1_root_domain_access_segment" type="domain_access_segment" object_table="program_1_object_table">
     <ad index="0" segment="program_1_root_instruction_data_segment"/>
     <ad index="1" segment="program_1_root_fault_instruction_data_segment"/>
   </segment>
