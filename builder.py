@@ -407,12 +407,16 @@ class Image(object):
                 descriptor.compute_size()
 
         # assign coordinates to all segment tables
+        # XXX would be nice to process in order they're declared,
+        #     which would require adding a list
         print "assigning coordinates of segment tables"
         for descriptor in self.descriptor_by_name.values():
             if isinstance(descriptor, SegmentTable):
                 descriptor.assign_coordinates()
 
         # assign coordinates to all other descriptors
+        # XXX would be nice to process in order they're declared,
+        #     which would require adding a list
         print "assigning coordinates of other descriptors"
         for descriptor in self.descriptor_by_name.values():
             descriptor.assign_coordinates()
