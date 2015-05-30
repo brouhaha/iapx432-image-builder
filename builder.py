@@ -25,15 +25,12 @@ class Allocation(object):
     def __str__(self):
         return ' '.join(["%d" % b for b in self._v])
 
-    def allocate(self, size=1, pos=None, fixed=False, dry_run=False):
-        if pos is None:
-            assert fixed == False
-            pos = self._v.find(self._z[:size])
-            if pos < 0:
-                raise self.AllocationError()
-        elif not fixed:
+    def allocate(self, size=1, pos=0, fixed=False, dry_run=False):
+        if not fixed:
             pos = self._v.find(self._z[:size], pos)
             if pos < 0:
+                raise self.AllocationError()
+            if max is not None and pos + size > max:
                 raise self.AllocationError()
         if self._v[pos:pos+size] != self._z[:size]:
             raise self.AllocationError()
@@ -41,8 +38,12 @@ class Allocation(object):
             self._v[pos:pos+size] = [1] * size
         return pos
 
-    def find_space(self, size=1, pos=None, fixed=False):
-        return self.allocate(size, pos, fixed, dry_run=True)
+    def find_space(self, size=1, pos=0, fixed=False):
+        return self.allocate(size=size, pos=pos, fixed=fixed, dry_run=True)
+
+    def discontiguous(self):
+        # XXX
+        return False
 
 
 class Field(object):
@@ -410,6 +411,8 @@ class SegmentTable(DataSegment):
         self._set_dir_index(2)
         self.index_allocation = Allocation(4096)
 
+        self.min_free_descriptors = int(segment_tree.get('reserve', '0'))
+
         self.allocate_index(0) # object table header
         self.object_table_header = ObjectTableHeader(self)
         self.fields.append(self.object_table_header)
@@ -427,19 +430,20 @@ class SegmentTable(DataSegment):
     def write_to_image(self):
         if self.written:
             return
+
         # fill remaining space with free descriptors in a linked list
         prev_descriptor = self.object_table_header
+        free_descriptor_count = 0
         index = 0
-        while True:
-            try:
-                index = self.index_allocation.allocate()
-            except Allocation.AllocationError:
-                break
+        while self.index_allocation.discontiguous() or free_descriptor_count < self.min_free_descriptors:
+            index = self.index_allocation.allocate()
             free_descriptor = FreeDescriptor(self, index)
             self.fields.append(free_descriptor)
             prev_descriptor.set_free_index(index)
+            free_descriptor_count += 1
             prev_descriptor = free_descriptor
         self.object_table_header.set_end_index(index)
+
         super(SegmentTable, self).write_to_image()
 
 class SegmentTableDirectory(SegmentTable):
