@@ -428,13 +428,15 @@
   <constant name="general_indirect"       encoding="0b00"/>
 </enumeration>
 
+<union name="indirect_reference_union" size="var">
+  <field discriminant_value="operand_stack_indirect" type="ordinal" size="0"      name="operand_stack_indirect"/>
+  <field discriminant_value="intrasegment_indirect"  type="intrasegment_indirect" name="intrasegment_indirect"/>
+  <field discriminant_value="general_indirect"       type="general_indirect"      name="general_indirect"/>
+</union>
+
 <struct name="indirect_reference" size="var">
   <field type="indirect_reference_type" name="type"/>
-  <union discriminant_field="type">
-    <field discriminant_value="operand_stack_indirect" type="ordinal" size="0"      name="operand_stack_indirect"/>
-    <field discriminant_value="intrasegment_indirect"  type="intrasegment_indirect" name="intrasegment_indirect"/>
-    <field discriminant_value="general_indirect"       type="general_indirect"      name="general_indirect"/>
-  </union>
+  <field type="indirect_reference_union" discriminant_field="type"/>
 </struct>
 
 <!-- Figure 11-16 on page 11-21 -->
@@ -485,21 +487,23 @@
 </struct>
 
 <!-- Figure 11-31 on page 11-47 -->
+<union name="branch_reference_union" size="var">
+  <field discrminiant_value="false" type="integer" size="10" name="relative"/>
+  <field discriminant_value="true"  type="ordinal" size="16" name="absolute"/>
+</union>
+
 <struct name="branch_reference" size="var">
   <field type="boolean" name="is_absolute"/>
-  <union discriminant_field="is_absolute">
-    <field discrminiant_value="false" type="integer" size="10" name="relative"/>
-    <field discriminant_value="true"  type="ordinal" size="16" name="absolute"/>
-  </union>
+  <field type="branch_reference_union" discriminant_field="is_absolute"/>
 </struct>
 
-<union name="reference">
+<union name="reference" size="var">
   <field type="data_reference" name="data_reference"/>
   <field type="branch_reference" name="branch_reference"/>
 </union>
 
 <!-- Figure 11-1 on page 11-3 -->
-<struct name="instruction">
+<struct name="instruction" size="var">
   <field type="instruction_class"  name="class"/>
   <field type="instruction_format" name="format"/> <!-- zero-length if order zero -->
   <array name="references" min="0" max="3">
@@ -509,9 +513,9 @@
 </struct>
 
 <!-- page 2-12 -->
-<enumeration name="procesor_class" size="3">
+<enumeration name="processor_class" size="3">
   <constant name="all"   encoding="0b000"/>
-  <constant name="gdb"   encoding="0b001"/>
+  <constant name="gdp"   encoding="0b001"/>
   <constant name="ip"    encoding="0b010"/>
 </enumeration>
 
@@ -690,16 +694,16 @@
   <field start="97"  size="31"                        name="preserved_97"/>
 </struct>
 
-<union name="descriptor">
-  <variant type="free_descriptor"          name="free_descriptor"/>
-  <variant type="storage_descriptor"       name="storage_descriptor"/>
-  <variant type="extended_type_descriptor" name="extended_type_descriptor"/>
-  <variant type="refinement_descriptor"    name="refinement_descriptor"/>
-  <variant type="interconnect_descriptor"  name="interconnect_descriptor"/>
+<union name="descriptor" size="128">
+  <field type="free_descriptor"          name="free_descriptor"/>
+  <field type="storage_descriptor"       name="storage_descriptor"/>
+  <field type="extended_type_descriptor" name="extended_type_descriptor"/>
+  <field type="refinement_descriptor"    name="refinement_descriptor"/>
+  <field type="interconnect_descriptor"  name="interconnect_descriptor"/>
 </union>
 
 <!-- Figure 2-11 on page 2-29 -->
-<struct name="storage_block_descriptor">
+<struct name="storage_block_descriptor" size="128">
   <field start="0"   size="32" type="ordinal"  name="base_address"/>
   <field start="32"  size="32" type="ordinal"  name="end_address"/>
   <field start="64"  size="1"  type="boolean"  name="last_block"/>
@@ -724,7 +728,7 @@
 </enumeration>
 
 <!-- Figure 3-15 on page 3-34, Figure 8-20 on page 8-20 -->
-<struct name="context_status">
+<struct name="context_status" size="16">
   <field start="0"  size="1"  type="boolean"             name="faulted"/>
   <field start="1"  size="10"                            name="preserved_1"/>
   <field start="11" size="1"  type="boolean"             name="fault_on_inexact"/>
@@ -733,7 +737,7 @@
 </struct>
 
 <!-- Figure 3-16 on page 3-36 -->
-<struct name="trace_information_area">
+<struct name="trace_information_area" size="40">
   <field start="0"   size="16"  type="ordinal" name="trace_object_index"/>
   <field start="16"  size="16"  type="ordinal" name="trace_ip"/>
   <field start="24"  size="16"  type="ordinal" name="trace_event_code"/> <!-- operator_id, all 1s for fault -->
@@ -853,7 +857,7 @@
   <field start="8"   size="8"   type="ordinal"          name="processor_id"/>
 </struct>
 
-<!-- Table 6-1 on page 6-12 -->
+<!-- IPC message encoding from Table 6-1 on page 6-12 -->
 <enumeration name="ipc_message" size="16">
   <constant name="wakeup"                                 encoding="0"/>
   <constant name="stop_processor"                         encoding="1"/>
@@ -998,9 +1002,9 @@
   <field start="64" size="16" type="ordinal"   name="data_constants_segment_index"/>
   <field start="80" size="16" type="ordinal"   name="fault_object_index_in_domain"/>
   <field start="96" size="16" type="ordinal"   name="trace_object_index_in_domain"/>
-  <vararray start="112" name="instructions">
+  <array start="112" name="instructions">
     <field type="instruction"/>
-  </vararray>
+  </array>
 </segment>
 
 <!-- Figure 3-13 on page 3-28 and Figure 8-2 on page 8-2 -->
@@ -1009,16 +1013,16 @@
   <system_rights index="1"/> <!-- Table 3-3 on page 3-31 -->
   <system_rights index="2"/>
   <system_rights index="3"/>
-  <ad_slot index="9" name="operand_stack"          type="data_segment"/>
-  <ad_slot index="8" name="domain_of_definition"   type="domain_access_segment"/>
-  <ad_slot index="7" name="entry_access_segment_3" type="access_segment"/>
-  <ad_slot index="6" name="entry_access_segment_2" type="access_segment"/>
-  <ad_slot index="5" name="entry_access_segment_1" type="access_segment"/>
-  <ad_slot index="4" name="current_context"        type="context_access_segment"/>
-  <ad_slot index="3" name="message_object"/>
-  <ad_slot index="2" name="previous_context"       type="context_access_segment"/>
-  <ad_slot index="1" name="constants_data_segment" type="data_segment"/>
-  <ad_slot index="0" name="context_data_segment"   type="context_data_segment"/>
+  <ad index="9" name="operand_stack"          type="data_segment"/>
+  <ad index="8" name="domain_of_definition"   type="domain_access_segment"/>
+  <ad index="7" name="entry_access_segment_3" type="access_segment"/>
+  <ad index="6" name="entry_access_segment_2" type="access_segment"/>
+  <ad index="5" name="entry_access_segment_1" type="access_segment"/>
+  <ad index="4" name="current_context"        type="context_access_segment"/>
+  <ad index="3" name="message_object"/>
+  <ad index="2" name="previous_context"       type="context_access_segment"/>
+  <ad index="1" name="constants_data_segment" type="data_segment"/>
+  <ad index="0" name="context_data_segment"   type="context_data_segment"/>
 </segment>
 
 <!-- Figure 3-14 on page 3-32 -->
@@ -1037,20 +1041,20 @@
   <system_rights index="3"/>
 
   <!-- following four ADs are store on a fault, for use by fault handler -->
-  <ad_slot index="11" name="surrogate_carrier"     type="carrier_access_segment"/>
-  <ad_slot index="10" name="current_carrier"       type="carrier_access_segment"/>
-  <ad_slot index="9"  name="current_port"          type="port_access_segment"/>
-  <ad_slot index="8"  name="current_message"/>
+  <ad index="11" name="surrogate_carrier"     type="carrier_access_segment"/>
+  <ad index="10" name="current_carrier"       type="carrier_access_segment"/>
+  <ad index="9"  name="current_port"          type="port_access_segment"/>
+  <ad index="8"  name="current_message"/>
   <!-- end of fault save ADs -->
 
-  <ad_slot index="7"  name="fault_port"            type="port_access_segment"/>
-  <ad_slot index="6"  name="scheduling_port"       type="port_access_segment"/>
-  <ad_slot index="5"  name="dispatching_port"      type="port_access_segment"/>
-  <ad_slot index="4"  name="process_carrier"       type="carrier_access_segment"/>
-  <ad_slot index="3"  name="local_object_table"/>
-  <ad_slot index="2"  name="global_access_segment" type="access_segment"/>
-  <ad_slot index="1"  name="current_context"       type="context_access_segment"/>
-  <ad_slot index="0"  name="process_data_segment"  type="process_data_segment"/>
+  <ad index="7"  name="fault_port"            type="port_access_segment"/>
+  <ad index="6"  name="scheduling_port"       type="port_access_segment"/>
+  <ad index="5"  name="dispatching_port"      type="port_access_segment"/>
+  <ad index="4"  name="process_carrier"       type="carrier_access_segment"/>
+  <ad index="3"  name="local_object_table"/>
+  <ad index="2"  name="global_access_segment" type="access_segment"/>
+  <ad index="1"  name="current_context"       type="context_access_segment"/>
+  <ad index="0"  name="process_data_segment"  type="process_data_segment"/>
 </segment>
 
 <!-- Figure 5-5 on page 5-9 -->
@@ -1069,30 +1073,30 @@
   <system_rights index="1" name="may_broadcast_ipc"/> <!-- Table 6-2 on page 6-30 -->
   <system_rights index="2" name="may_send_ipc"/>
   <system_rights index="3"/>
-  <ad_slot index="19" name="diagnostic_port_carrier"      type="carrier_access_segment"/>
-  <ad_slot index="18" name="reconfiguration_port_carrier" type="carrier_access_segment"/>
-  <ad_slot index="17" name="alarm_port_carrier"           type="carrier_access_segment"/>
-  <ad_slot index="16" name="normal_port_carrier"          type="carrier_access_segment"/>
-  <ad_slot index="15" name="diagnostic_port"              type="port_access_segment"/>
-  <ad_slot index="14" name="reconfiguration_port"         type="port_access_segment"/>
-  <ad_slot index="13" name="alarm_port"                   type="port_access_segment"/>
-  <ad_slot index="12" name="normal_port"                  type="port_access_segment"/>
+  <ad index="19" name="diagnostic_port_carrier"      type="carrier_access_segment"/>
+  <ad index="18" name="reconfiguration_port_carrier" type="carrier_access_segment"/>
+  <ad index="17" name="alarm_port_carrier"           type="carrier_access_segment"/>
+  <ad index="16" name="normal_port_carrier"          type="carrier_access_segment"/>
+  <ad index="15" name="diagnostic_port"              type="port_access_segment"/>
+  <ad index="14" name="reconfiguration_port"         type="port_access_segment"/>
+  <ad index="13" name="alarm_port"                   type="port_access_segment"/>
+  <ad index="12" name="normal_port"                  type="port_access_segment"/>
 
   <!-- following four ADs filled in by fault processing -->
-  <ad_slot index="11" name="surrogate_carrier"            type="carrier_access_segment"/>
-  <ad_slot index="10" name="current_carrier"              type="carrier_access_segment"/>
-  <ad_slot index="9"  name="current_port"                 type="port_access_segment"/>
-  <ad_slot index="8"  name="current_message"/>
+  <ad index="11" name="surrogate_carrier"            type="carrier_access_segment"/>
+  <ad index="10" name="current_carrier"              type="carrier_access_segment"/>
+  <ad index="9"  name="current_port"                 type="port_access_segment"/>
+  <ad index="8"  name="current_message"/>
   <!-- end of ADs filled in by fault processing -->
 
-  <ad_slot index="7"  name="delay_carrier"                type="carrier_access_segment"/>
-  <ad_slot index="6"  name="delay_port"                   type="port_access_segment"/>
-  <ad_slot index="5"  name="processor_carrier"            type="carrier_access_segment"/>
-  <ad_slot index="4"  name="object_table_directory"       type="object_table_data_segment"/>
-  <ad_slot index="3"  name="global_communication_segment" type="communication_data_segment"/>
-  <ad_slot index="2"  name="local_communication_segment"  type="communication_data_segment"/>
-  <ad_slot index="1"  name="current_process_carrier"      type="carrier_access_segment"/>
-  <ad_slot index="0"  name="processor_data_segment"       type="processor_data_segment"/>
+  <ad index="7"  name="delay_carrier"                type="carrier_access_segment"/>
+  <ad index="6"  name="delay_port"                   type="port_access_segment"/>
+  <ad index="5"  name="processor_carrier"            type="carrier_access_segment"/>
+  <ad index="4"  name="object_table_directory"       type="object_table_data_segment"/>
+  <ad index="3"  name="global_communication_segment" type="communication_data_segment"/>
+  <ad index="2"  name="local_communication_segment"  type="communication_data_segment"/>
+  <ad index="1"  name="current_process_carrier"      type="carrier_access_segment"/>
+  <ad index="0"  name="processor_data_segment"       type="processor_data_segment"/>
 </segment>
 
 <!-- Figure 6-13 on page 6-31 -->
@@ -1126,10 +1130,10 @@
   <system_rights index="2" name="may_receive"/>
   <system_rights index="3"/>
   <!-- indicies 4 and above are access descriptors to message objects -->
-  <ad_slot index="3" name="reserved"/>
-  <ad_slot index="2" name="tail_of_carrier_queue" type="carrier_access_segment"/>
-  <ad_slot index="1" name="head_of_carrier_queue" type="carrier_access_segment"/>
-  <ad_slot index="0" name="port_data_segment"     type="port_data_segment"/>
+  <ad index="3" name="reserved"/>
+  <ad index="2" name="tail_of_carrier_queue" type="carrier_access_segment"/>
+  <ad index="1" name="head_of_carrier_queue" type="carrier_access_segment"/>
+  <ad index="0" name="port_data_segment"     type="port_data_segment"/>
 </segment>
 
 <!-- Figure 4-22 on page 4-37 and Figure 6-23 on page 6-47 -->
@@ -1148,15 +1152,15 @@
   <system_rights index="1" name="may_surrogate"/> <!-- Table 4-2 on page 4-36 and Table 6-5 on page 6-46 -->
   <system_rights index="2"/>
   <system_rights index="3"/>
-  <ad_slot index="8" name="carried_object"/>
-  <ad_slot index="7" name="incoming_message"/>
-  <ad_slot index="6" name="outgoing_message"/>
-  <ad_slot index="5" name="refined_carrier"/>
-  <ad_slot index="4" name="maintenance_port"      type="port_access_segment"/>
-  <ad_slot index="3" name="second_port"           type="port_access_segment"/>
-  <ad_slot index="2" name="current_port"          type="port_access_segment"/>
-  <ad_slot index="1" name="next_carrier_in_queue" type="carrier_access_segment"/>
-  <ad_slot index="0" name="carrier_data_segment"  type="carrier_data_segment"/>
+  <ad index="8" name="carried_object"/>
+  <ad index="7" name="incoming_message"/>
+  <ad index="6" name="outgoing_message"/>
+  <ad index="5" name="refined_carrier"/>
+  <ad index="4" name="maintenance_port"      type="port_access_segment"/>
+  <ad index="3" name="second_port"           type="port_access_segment"/>
+  <ad index="2" name="current_port"          type="port_access_segment"/>
+  <ad index="1" name="next_carrier_in_queue" type="carrier_access_segment"/>
+  <ad index="0" name="carrier_data_segment"  type="carrier_data_segment"/>
 </segment>
 
 <!-- Figure 2-14 on page 2-34 -->
@@ -1181,8 +1185,8 @@
   <system_rights index="1" name="allocation_allowed"/> <!-- Table 2-2 on page 2-33 -->
   <system_rights index="2"/>
   <system_rights index="3"/>
-  <ad_slot index="1" name="object_table"     type="object_table_data_segment"/>
-  <ad_slot index="0" name="storage_resource" type="storage_resource_data_segment"/>
+  <ad index="1" name="object_table_data_segment"     type="object_table_data_segment"/>
+  <ad index="0" name="storage_resource_data_segment" type="storage_resource_data_segment"/>
 </segment>
 
 <segment base_type="access_segment" system_type="type_definition" name="type_definition_access_segment">
@@ -1233,24 +1237,5 @@
   <field start="24"  size="5"  type="system_type"     name="source_system_type"/>
   <field start="29"  size="3"  type="processor_class" name="source_processor_class"/>
 </segment>
-
-<!-- IPC message encoding from Table 6-1 on page 6-12 -->
-<enumeration name="ipc_message" size="16">
-  <constant name="wakeup"                                encoding="0"/>
-  <constant name="stop_processor"                        encoding="1"/>
-  <constant name="clear_broadcast_acceptance"            encoding="2"/>
-  <constant name="set_broadcast_acceptance"              encoding="3"/>
-  <constant name="enter_normal_mode"                     encoding="4"/>
-  <constant name="enter_alarm_mode"                      encoding="5"/>
-  <constant name="enter_reconfiguration_mode"            encoding="6"/>
-  <constant name="enter_diagnostic_mode"                 encoding="7"/>
-  <constant name="suspend_and_requalify_context"         encoding="8"/>
-  <constant name="suspend_and_requalify_process"         encoding="9"/>
-  <constant name="suspend_and_requalify_processor"       encoding="10"/>
-  <constant name="suspend_and_fully_requalify_processor" encoding="11"/>
-  <constant name="flush_object_table_cache"              encoding="12"/>
-  <constant name="flush_data_segment_cache"              encoding="13"/>
-  <constant name="start_processor"                       encoding="14"/>
-</enumeration>
 
 </definitions>

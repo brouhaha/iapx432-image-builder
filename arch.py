@@ -8,12 +8,9 @@ import re
 import sys
 import xml.etree.ElementTree
 
-class arch(object):
+class Arch(object):
     symbol_t = collections.namedtuple('symbol_t', ['type',
                                                    'value'])
-
-    segment_t = collections.namedtuple('segment_t', ['base_type',
-                                                     'system_type'])
 
     size_value_t = collections.namedtuple('size_value_t', ['size',
                                                            'value'])
@@ -32,6 +29,114 @@ class arch(object):
                                                        'id',
                                                        'clas',
                                                        'encoding']) # opcode
+
+    class Field(object):
+        # a factory method
+        @staticmethod
+        def parse(parent, tree):
+            d = { 'ad': Arch.AD,
+                  'field': Arch.DataField }
+            return d[tree.tag](parent, tree)
+
+        def parse_name(self, k, v):
+            self.name = v
+        
+        def __init__(self, parent):
+            self.parent = parent
+            self.name = None
+            self.offset = None
+            self.size = None
+
+    class AD(Field):
+        def parse_index(self, k, v):
+            index = int(v)
+            assert 0 <= index <= 16383
+            self.offset = 4 * index
+        
+        def parse_type(self, k, v):
+            pass
+        
+        def __init__(self, parent, tree):
+            super(Arch.AD, self).__init__(parent)
+            d = { 'index': self.parse_index,
+                  'name': self.parse_name,
+                  'type': self.parse_type }
+            self.type = None
+            self.size = 4
+            for k, v in tree.attrib.iteritems():
+                d[k](k, v)
+            assert self.offset is not None
+            self.parent.field_by_offset[self.offset] = self
+            if self.name is not None:
+                self.parent.field_by_name[self.name] = self
+
+    class DataField(Field):
+        def __init__(self, parent, tree):
+            super(Arch.DataField, self).__init__(parent)
+
+
+    class SystemRights(object):
+        def parse_index(self, k, v):
+            index = int(v)
+            assert 1 <= index <= 3
+            self.index = index
+
+        def parse_name(self, k, v):
+            self.name = v
+        
+        def __init__(self, tree):
+            d = { 'index': self.parse_index,
+                  'name': self.parse_name }
+            self.index = None
+            self.name = None
+            for k, v in tree.attrib.iteritems():
+                d[k](k, v)
+
+
+    class Segment(object):
+        def parse_name(self, tree, k, v):
+            self.name = v
+
+        def parse_base_type(self, tree, k, v):
+            assert self.arch.is_enumeration_element('base_type', v)
+            self.base_type = v
+
+        def parse_system_type(self, tree, k, v):
+            assert self.arch.is_enumeration_element('system_type', v)
+            self.system_type = v
+
+        def parse_processor_class(self, tree, k, v):
+            assert self.arch.is_enumeration_element('processor_class', v)
+            self.processor_class = v
+
+        def __init__(self, arch, tree):
+            self.arch = arch
+            d = { 'name': self.parse_name,
+                  'base_type': self.parse_base_type,
+                  'system_type': self.parse_system_type,
+                  'processor_class': self.parse_processor_class }
+            self.name = None
+            self.base_type = None
+            self.system_type = None
+            self.processor_class = 'all'
+            for k, v in tree.attrib.iteritems():
+                d[k](tree, k, v)
+            assert self.name is not None
+            assert self.base_type is not None
+            assert self.system_type is not None
+            self.system_rights = [None] * 4  # element 0 unused
+            self.fields = []
+            self.field_by_offset = { }
+            self.field_by_name = { }
+            for child in tree:
+                if child.tag == 'system_rights':
+                    system_rights = Arch.SystemRights(child)
+                    self.system_rights[system_rights.index] = system_rights
+                elif child.tag == 'array':
+                    pass
+                else:
+                    self.fields.append(Arch.Field.parse(self, child))
+
 
     def get_single_element(self, base, element_name):
         el = base.findall(element_name)
@@ -327,16 +432,11 @@ class arch(object):
                                                    self.get_struct(child))
             elif child.tag == 'segment':
                 assert name not in self.symbols
+                self.symbols[name] = self.symbol_t(child.tag, Arch.Segment(self, child))
 
-                base_type = child.get('base_type')
-                assert self.is_enumeration_element('base_type', base_type)
 
-                system_type = child.get('system_type')
-                assert self.is_enumeration_element('system_type', system_type)
-
-                self.symbols[name] = self.symbol_t(child.tag,
-                                                   self.segment_t(base_type,
-                                                                  system_type))
+#    XXX            segment = arch.Segment(base_type, system_type)
+# XXX                self.symbols[name] = self.symbol_t(child.tag, segment)
 
 
 def gen_operator_h(arch, f):

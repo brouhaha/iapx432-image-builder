@@ -8,7 +8,7 @@ import re
 import sys
 import xml.etree.ElementTree
 
-from arch import arch
+from arch import Arch
 
 
 class Allocation(object):
@@ -74,9 +74,12 @@ class AD(Field):
                      '0': False }
 
     def _parse_name(self, k, v):
-        # can have name or index, but if both, must match
-        # XXX look up name to get index
-        pass
+        # find index (and thus offset) from name
+        s = self.arch.symbols[self.segment.segment_type]
+        assert s.type == 'segment'
+        assert v in s.value.field_by_name
+        f = s.value.field_by_name[v]
+        self.offset = f.offset
 
     def _parse_index(self, k, v):
         offset = 4 * int(v)
@@ -123,6 +126,9 @@ class AD(Field):
 
         if not hasattr(self, 'valid'):
             self.valid = self.segment_name is not None
+
+        # XXX if AD is defined in arch to have a type, we
+        # should verify it!
 
     def write_value(self):
         if self.valid:
@@ -494,7 +500,7 @@ if __name__ == '__main__':
 
     arch_tree = xml.etree.ElementTree.parse(args.arch)
     args.arch.close()
-    arch = arch(arch_tree)
+    arch = Arch(arch_tree)
 
     image_tree = xml.etree.ElementTree.parse(args.image[0])
     args.image[0].close()
