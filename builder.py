@@ -272,6 +272,20 @@ class Object(object):
         #print "assigned dir_index", self.dir_index, "seg_index", self.seg_index
 
 
+# attributes:
+#   name
+#   type
+#   object_table
+#   dir_index
+#   seg_index
+#   reserve
+# Must have either object_table or dir_index.
+# XXX Maybe replace object_table with a numeric dir_index?
+# contents:
+#   ad (data_segment only)
+#   field (access_segment only)
+#   access_size
+#   reserve_ad
 class Segment(Object):
     # a factory method
     @staticmethod
@@ -332,9 +346,9 @@ class Segment(Object):
     def write_to_image(self):
         if self.written:
             return
+        self.written = True
         for field in self.fields:
             field.write_value()
-        self.written = True
 
 
 class AccessSegment(Segment):
@@ -391,6 +405,16 @@ class SegmentTable(DataSegment):
             object_table_entry = StorageDescriptor(self, obj, index)
             self.fields.append(object_table_entry)
             return self.index_allocation.allocate(pos=index, fixed=True)
+
+    def write_to_image(self):
+        if self.written:
+            return
+        self.written = True
+        # XXX write allocated descriptors
+        # XXX write free descriptors, chained as linked list
+        # XXX write object table header
+        for field in self.fields:
+            field.write_value()
 
 class SegmentTableDirectory(SegmentTable):
     def __init__(self, image, segment_tree):
