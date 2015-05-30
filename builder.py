@@ -15,6 +15,8 @@ class Allocation(object):
     # This could be eight times as storage-efficient, at a substantial
     # increase in complexity, by storing eight bits per byte instead
     # of only one.
+    class AllocationError(Exception):
+        pass
     
     def __init__(self, size):
         self._v = bytearray(size)
@@ -27,19 +29,20 @@ class Allocation(object):
         if pos is None:
             assert fixed == False
             pos = self._v.find(self._z[:size])
-            assert pos != -1
+            if pos < 0:
+                raise self.AllocationError()
         elif not fixed:
             pos = self._v.find(self._z[:size], pos)
-            assert pos != -1
-        assert self._v[pos:pos+size] == self._z[:size]
+            if pos < 0:
+                raise self.AllocationError()
+        if self._v[pos:pos+size] != self._z[:size]:
+            raise self.AllocationError()
         if not dry_run:
             self._v[pos:pos+size] = [1] * size
         return pos
 
-    def lowest_available(self, size=1):
-        pos = self._v.find(self._z)
-        assert pos != -1
-        return pos
+    def find_space(self, size=1, pos=None, fixed=False):
+        return self.allocate(size, pos, fixed, dry_run=True)
 
 
 class Field(object):
@@ -166,6 +169,21 @@ class ObjectTableHeader(ObjectTableEntry):
     def __init__(self, segment):
         super(ObjectTableHeader, self).__init__(segment)
         self.offset = 0
+
+    def set_free_index(self, index):
+        pass
+
+    # The end index is ony needed for stack OTs
+    def set_end_index(self, index):
+        pass
+
+class FreeDescriptor(ObjectTableEntry):
+    def __init__(self, segment, index):
+        super(FreeDescriptor, self).__init__(segment)
+        self.offset = index * 16
+
+    def set_free_index(self, index):
+        pass
 
 class StorageDescriptor(ObjectTableEntry):
     def __init__(self, segment, obj, index):
@@ -393,28 +411,36 @@ class SegmentTable(DataSegment):
         self.index_allocation = Allocation(4096)
 
         self.allocate_index(0) # object table header
-        object_table_header = ObjectTableHeader(self)
-        self.fields.append(object_table_header)
+        self.object_table_header = ObjectTableHeader(self)
+        self.fields.append(self.object_table_header)
 
     def allocate_index(self, obj=None, index=None):
         if index is None:
-            return self.index_allocation.allocate(dry_run=True)
+            return self.index_allocation.find_space()
         else:
             # XXX following needs to handle other kinds of objects,
             #     based on object type
-            object_table_entry = StorageDescriptor(self, obj, index)
-            self.fields.append(object_table_entry)
+            storage_descriptor = StorageDescriptor(self, obj, index)
+            self.fields.append(storage_descriptor)
             return self.index_allocation.allocate(pos=index, fixed=True)
 
     def write_to_image(self):
         if self.written:
             return
-        self.written = True
-        # XXX write allocated descriptors
-        # XXX write free descriptors, chained as linked list
-        # XXX write object table header
-        for field in self.fields:
-            field.write_value()
+        # fill remaining space with free descriptors in a linked list
+        prev_descriptor = self.object_table_header
+        index = 0
+        while True:
+            try:
+                index = self.index_allocation.allocate()
+            except Allocation.AllocationError:
+                break
+            free_descriptor = FreeDescriptor(self, index)
+            self.fields.append(free_descriptor)
+            prev_descriptor.set_free_index(index)
+            prev_descriptor = free_descriptor
+        self.object_table_header.set_end_index(index)
+        super(SegmentTable, self).write_to_image()
 
 class SegmentTableDirectory(SegmentTable):
     def __init__(self, image, segment_tree):
