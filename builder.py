@@ -31,7 +31,7 @@ class Allocation(object):
         elif not fixed:
             pos = self._v.find(self._z[:size], pos)
             assert pos != -1
-        assert self._v[pos] == 0
+        assert self._v[pos:pos+size] == self._z[:size]
         if not dry_run:
             self._v[pos:pos+size] = [1] * size
         return pos
@@ -79,7 +79,11 @@ class AD(Field):
         pass
 
     def _parse_index(self, k, v):
-        # can have name or index, but if both, must match
+        offset = 4 * int(v)
+        if self.offset is not None:
+            assert offset == self.offset
+        else:
+            self.offset = offset
         pass
 
     def _parse_segment(self, k, v):
