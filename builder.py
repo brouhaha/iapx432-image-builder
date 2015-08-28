@@ -84,7 +84,7 @@ class AD(Field):
 
     def _parse_index(self, k, v):
         try:
-            offset = 4 * int(v)
+            offset = 4 * int(v, 0)
         except ValueError:
             s = self.arch.symbols[self.segment.segment_type]
             assert s.type == 'segment'
