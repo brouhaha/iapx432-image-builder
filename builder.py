@@ -78,20 +78,23 @@ class AD(Field):
                      '0': False }
 
     def _parse_name(self, k, v):
-        # find index (and thus offset) from name
-        s = self.arch.symbols[self.segment.segment_type]
-        assert s.type == 'segment'
-        assert v in s.value.field_by_name
-        f = s.value.field_by_name[v]
-        self.offset = f.offset
+        # XXX doesn't do anything yet, but eventually allow
+        #     ad-hoc definition of a name for an AD slot in an object
+        pass
 
     def _parse_index(self, k, v):
-        offset = 4 * int(v)
+        try:
+            offset = 4 * int(v)
+        except ValueError:
+            s = self.arch.symbols[self.segment.segment_type]
+            assert s.type == 'segment'
+            assert v in s.value.field_by_name
+            f = s.value.field_by_name[v]
+            offset = f.offset
         if self.offset is not None:
             assert offset == self.offset
         else:
             self.offset = offset
-        pass
 
     def _parse_segment(self, k, v):
         self.segment_name = v
