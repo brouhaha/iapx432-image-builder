@@ -304,6 +304,9 @@
   </segment>
 
   <segment name="process_1_global_access_segment" type="generic_access_segment" object_table="process_1_object_table">
+    <!-- The global SRO has to be accessible from somewhere, the process
+	 global access segment seems as good a place as any. -->
+    <ad index="0" segment="global_sro_access_segment"/>
   </segment>
 
   <segment name="process_1_root_context_data_segment" type="context_data_segment" object_table="process_1_object_table">
@@ -313,8 +316,12 @@
   <segment name="process_1_root_context_access_segment" type="context_access_segment" object_table="process_1_object_table">
     <ad name="context_data_segment"   segment="process_1_root_context_data_segment"/>
     <ad name="constants_data_segment" segment="process_1_root_constants_data_segment"/>
-    <!-- don't need previous context, not going to return -->
+    <!-- XXX null AD for previous context, not going to return -->
+    <!-- XXX null AD for message object -->
     <ad name="current_context"        segment="process_1_root_context_access_segment"/>
+    <!-- XXX null ADs for entry access segments 1..3 -->
+    <ad name="domain_of_definition"   segment="program_1_root_domain_access_segment"/>
+    <ad name="operand_stack"          segment="process_1_root_operand_stack_data_segment"/>
   </segment>
 
   <segment name="null_program_instruction_data_segment" type="instruction_data_segment" object_table="null_program_object_table">
