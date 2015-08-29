@@ -18,7 +18,8 @@ class Allocation(object):
     class AllocationError(Exception):
         pass
     
-    def __init__(self, size):
+    def __init__(self, size, name = None):
+        self.name = name
         self._v = bytearray(size)
         self._z = bytearray(size)  # in Python 3, this could be a bytes object
 
@@ -26,6 +27,7 @@ class Allocation(object):
         return ' '.join(["%d" % b for b in self._v])
 
     def allocate(self, size=1, pos=0, fixed=False, dry_run=False):
+        #print "allocating from:", self.name, "size:", size, "pos:", pos, "fixed:", fixed, "dry_run:", dry_run
         if not fixed:
             pos = self._v.find(self._z[:size], pos)
             if pos < 0:
@@ -33,13 +35,16 @@ class Allocation(object):
             if max is not None and pos + size > max:
                 raise self.AllocationError()
         if self._v[pos:pos+size] != self._z[:size]:
+            #print "pos:", pos, "size:", size
+            #print [int(x) for x in self._v[pos:pos+size]]
             raise self.AllocationError()
         if not dry_run:
             self._v[pos:pos+size] = [1] * size
+        #print "returning pos", pos
         return pos
 
-    def find_space(self, size=1, pos=0, fixed=False):
-        return self.allocate(size=size, pos=pos, fixed=fixed, dry_run=True)
+    #def find_space(self, size=1, pos=0, fixed=False):
+    #    return self.allocate(size=size, pos=pos, fixed=fixed, dry_run=True)
 
     def discontiguous(self):
         # XXX
@@ -60,9 +65,22 @@ class Field(object):
         self.arch = self.image.arch
         if field_tree is not None:
             self.name = field_tree.get('name')
+        self.allocated = False
         self.size = None
         self.offset = None
-        # XXX
+
+    def allocate(self):
+        if self.allocated:
+            return
+        assert self.size is not None
+        if self.offset is None:
+            self.offset = self.segment.allocation.allocate(size = self.size)
+        else:
+            self.segment.allocation.allocate(size = self.size,
+                                                           pos = self.offset,
+                                                           fixed = True)
+            
+        self.allocated = True
 
     def compute_size(self):
         if self.size is None:
@@ -162,17 +180,19 @@ class DataField(Field):
         pass # XXX
 
 class ObjectTableEntry(Field):
-    def __init__(self, segment):
+    def __init__(self, segment, offset = None):
         super(ObjectTableEntry, self).__init__(segment, None)
         self.size = 16
+        if offset is not None:
+            self.offset = offset
+            self.allocate()
 
     def write_value(self):
         pass # XXX
 
 class ObjectTableHeader(ObjectTableEntry):
     def __init__(self, segment):
-        super(ObjectTableHeader, self).__init__(segment)
-        self.offset = 0
+        super(ObjectTableHeader, self).__init__(segment, offset = 0)
 
     def set_free_index(self, index):
         pass
@@ -226,22 +246,50 @@ class Object(object):
         self.dir_index = None
         self.seg_index = None
         self.reference_count = 0
+        self.ote = None
 
         self.object_table = tree.get('object_table')
 
+        if isinstance(self, SegmentTable) and self.object_table is None:
+            self.object_table = image.segment_table_directory.name
+            
+        #print "name", self.name, "object table", self.object_table
+
         if 'dir_index' in tree.attrib:
             self._set_dir_index(int(tree.get('dir_index')))
+            # XXX later need to verify that dir_index matches object table
         if 'seg_index' in tree.attrib:
             self._set_seg_index(int(tree.get('seg_index')))
 
+    def _alloc_ote(self):
+        if self.ote is None:
+            if self.dir_index == 2 and self.seg_index == 2:
+                seg_table = self
+            else:
+                seg_table = self.image.object_by_coord[(2, self.dir_index)]
+            if self.seg_index is None:
+                self.ote = ObjectTableEntry(seg_table)
+                self.ote.allocate()
+                self.seg_index = self.ote.offset / 16
+            else:
+                self.ote = ObjectTableEntry(seg_table, self.seg_index * 16)
+                self.ote.allocate()
+            self.image.object_by_coord[(self.dir_index, self.seg_index)] = self
+            seg_table.fields.append(self.ote)
+        else:
+            if dir_index is not None:
+                # assert ???
+                pass
+            if seg_index is not None:
+                # assert ???
+                pass
+
     def _mark_coord(self):
+        #print "mark_coord for", self.name, "(%d, %d)" % (self.dir_index, self.seg_index)
         coord = (self.dir_index, self.seg_index)
         #print "descr", self.name, "assigned", coord
         assert coord not in self.image.object_by_coord
-        self.image.object_by_coord[coord] = self
-        seg_table = self.image.object_by_coord[(2, self.dir_index)]
-        seg_table.allocate_index(self, self.seg_index)
-        
+        self._alloc_ote()
 
     def _set_dir_index(self, dir_index):
         if dir_index is None:
@@ -278,20 +326,25 @@ class Object(object):
             assert self.object_table in self.image.object_by_name
             object_table = self.image.object_by_name[self.object_table]
             dir_index = object_table.seg_index
-            #if dir_index is None:
-            #    print "recursively assigning coordinates"
-            #    object_table.assign_coordinates()
-            #    dir_index = object_table.seg_index
+            if dir_index is None:
+                print "recursively assigning coordinates"
+                object_table.assign_coordinates()
+                dir_index = object_table.seg_index
             #print "dir index", dir_index
             self._set_dir_index(dir_index)
         assert self.dir_index is not None
         if self.seg_index is None:
             #print "allocating a segment table entry"
-            dir = self.image.object_by_coord[(2, self.dir_index)]
-            #print "dir", dir
-            seg_index = dir.allocate_index() # finds an index but doesn't allocate
-            self._set_seg_index(seg_index)   # actually allocates it
-        #print "assigned dir_index", self.dir_index, "seg_index", self.seg_index
+            self._alloc_ote()
+            #object_table = self.image.object_by_name[self.object_table]
+            #self.ote = ObjectTableEntry(object_table)
+            #print "ote size", ote.size
+            #self.ote.allocate()
+            #object_table.fields.append(ote)
+            #print "dir_index %d" % self.dir_index
+            #print "ote offset %d" % ote.offset
+            #self._set_seg_index(ote.offset / 16)
+        #print "%s assigned dir_index %d seg_index %d" % (self.name, self.dir_index, self.seg_index)
 
 
 # attributes:
@@ -336,39 +389,61 @@ class Segment(Object):
         self.min_size = segment_tree.get('min_size')
         #self.phys_addr = segment_tree.get('phys_addr')  # address of segment prefix
 
+        self.data = bytearray(65536)
+        self.allocation = Allocation(65536, self.name)
+
         self.written = False
 
         self.fields = []
         for field_tree in segment_tree:
             self.fields.append(Field.parse(self, field_tree))
 
+    def abs_min_size(self):
+        # don't allow a zero length data segment, round up to 1 byte
+        # XXX note release 3 arch allows object to have zero-length data part,
+        #     and/or zero-length access part
+        return 1
+    
     def compute_size(self):
-        offset = 0
-        self.data = bytearray(65536)
-        self.allocation = Allocation(65536)
-
         for field in self.fields:
             field.compute_size()
             # hack - we really need the sizes computed!
             if field.size is None:
                 field.size = 4
 
+        # first allocate fields at fixed offsets
         for field in self.fields:
-            if field.offset is not None:
-                offset = field.offset
-                self.allocation.allocate(pos = field.offset, size = field.size, fixed=True)
-            else:
-                
-                field.offset = self.allocation.allocate(pos = field.offset, size = field.size)
-            offset = field.offset + field.size
+            if (not field.allocated) and (field.offset is not None):
+                try:
+                    field.allocate()
+                except Allocation.AllocationError as e:
+                     print "segment %s field allocation error, pos %d, size %d" % (self.name, field.offset, field.size)
 
-        self.size = max(self.allocation.allocate(dry_run=True), self.min_size)
+        # then allocate fields at dynamic offsets
+        for field in self.fields:
+            if not field.allocated:
+                field.allocate()
+
+        self.size = max(self.allocation.allocate(dry_run=True), self.min_size, self.abs_min_size())
         return self.size
 
     def write_to_image(self):
         if self.written:
             return
         self.written = True
+        # allow 8 bytes for segment prefix, below the phys addr
+        # and round up size to a multiple of 8
+        rounded_size_with_prefix = 8 + ((self.size + 7) & ~7)
+        #print "segment %s orig size %d rounded with prefix %d" % (self.name, self.size, rounded_size_with_prefix)
+        if self.phys_addr is None:
+            self.phys_addr = self.image.phys_mem_allocation.allocate(size = rounded_size_with_prefix) + 8
+        else:
+            # segment is at specified address
+            self.image.phys_mem_allocation.allocate(size = rounded_size_with_prefix,
+                                                    pos = self.phys_addr - 8,
+                                                    fixed = True)
+        print "segment %s coord (%d, %d): phys addr %06x, size %d" % (self.name, self.dir_index, self.seg_index, self.phys_addr, self.size)
+        # XXX write segment prefix at self.phys_addr - 8
         for field in self.fields:
             field.write_value()
 
@@ -382,6 +457,11 @@ class AccessSegment(Segment):
     def __init__(self, image, segment_tree):
         super(AccessSegment, self).__init__(image, segment_tree)
 
+    def abs_min_size(self):
+        # don't allow a zero length access segment, round up to
+        # one access descriptor
+        return 4   
+    
 
 class DataSegment(Segment):
     # a factory method
@@ -412,23 +492,12 @@ class SegmentTable(DataSegment):
     def __init__(self, image, segment_tree):
         super(SegmentTable, self).__init__(image, segment_tree)
         self._set_dir_index(2)
-        self.index_allocation = Allocation(4096)
 
         self.min_free_descriptors = int(segment_tree.get('reserve', '0'))
 
-        self.allocate_index(0) # object table header
+        # segment table header
         self.object_table_header = ObjectTableHeader(self)
         self.fields.append(self.object_table_header)
-
-    def allocate_index(self, obj=None, index=None):
-        if index is None:
-            return self.index_allocation.find_space()
-        else:
-            # XXX following needs to handle other kinds of objects,
-            #     based on object type
-            storage_descriptor = StorageDescriptor(self, obj, index)
-            self.fields.append(storage_descriptor)
-            return self.index_allocation.allocate(pos=index, fixed=True)
 
     def write_to_image(self):
         if self.written:
@@ -438,8 +507,8 @@ class SegmentTable(DataSegment):
         prev_descriptor = self.object_table_header
         free_descriptor_count = 0
         index = 0
-        while self.index_allocation.discontiguous() or free_descriptor_count < self.min_free_descriptors:
-            index = self.index_allocation.allocate()
+        while self.allocation.discontiguous() or free_descriptor_count < self.min_free_descriptors:
+            index = self.allocation.allocate(size = 16) / 16
             free_descriptor = FreeDescriptor(self, index)
             self.fields.append(free_descriptor)
             prev_descriptor.set_free_index(index)
@@ -452,13 +521,16 @@ class SegmentTable(DataSegment):
 class SegmentTableDirectory(SegmentTable):
     def __init__(self, image, segment_tree):
         assert image.segment_table_directory is None
-        super(SegmentTableDirectory, self).__init__(image, segment_tree)
-        self._set_seg_index(2)
-        if self.phys_addr is None:
-            self.phys_addr = 0  # address of segment prefix
-        else:
-            assert self.phys_addr == 0
         image.segment_table_directory = self
+
+        super(SegmentTableDirectory, self).__init__(image, segment_tree)
+
+        self._set_seg_index(2)
+
+        if self.phys_addr is None:
+            self.phys_addr = 8  # segment prefix is at 0
+        else:
+            assert self.phys_addr == 8
 
 class InstructionSegment(Segment):
     # XXX not yet any way to instantiate this
@@ -501,17 +573,12 @@ class Image(object):
         self.object_by_coord = { }
         self.object_by_name = { }
         self.segment_table_directory = None
+        self.phys_mem_allocation = Allocation(1 << 24, "phys mem")
 
         for obj_tree in image_root:
             name = obj_tree.get('name')
             assert name not in self.object_by_name
             self.object_by_name[name] = Object.parse(self, obj_tree)
-
-        # compute sizes of all segments
-        print "computing sizes of segments"
-        for obj in self.object_by_name.values():
-            if isinstance(obj, Segment):
-                obj.compute_size()
 
         # assign coordinates to all segment tables
         # XXX would be nice to process in order they're declared,
@@ -527,6 +594,12 @@ class Image(object):
         print "assigning coordinates of other objects"
         for obj in self.object_by_name.values():
             obj.assign_coordinates()
+
+        # compute sizes of all segments
+        print "computing sizes of segments"
+        for obj in self.object_by_name.values():
+            if isinstance(obj, Segment):
+                obj.compute_size()
 
         # if segment has a preassigned base address, write it
         for obj in self.object_by_name.values():
