@@ -617,10 +617,10 @@ class Image(object):
             assert name not in self.object_by_name
             self.object_by_name[name] = Object.parse(self, obj_tree)
 
+    def assign_coordinates(self):
         # assign coordinates to all segment tables
         # XXX would be nice to process in order they're declared,
         #     which would require adding a list
-        print "assigning coordinates of segment tables"
         for obj in self.object_by_name.values():
             if isinstance(obj, SegmentTable):
                 obj.assign_coordinates()
@@ -628,32 +628,34 @@ class Image(object):
         # assign coordinates to all other objects
         # XXX would be nice to process in order they're declared,
         #     which would require adding a list
-        print "assigning coordinates of other objects"
         for obj in self.object_by_name.values():
             obj.assign_coordinates()
 
+    def compute_segment_sizes(self):
         # compute sizes of all segments
-        print "computing sizes of segments"
         for obj in self.object_by_name.values():
             if isinstance(obj, Segment):
                 obj.compute_size()
-                print "segment", obj.name, "size", obj.size
 
+    def write_segments(self):
         # if segment has a preassigned base address, write it
-        print "writing segments with assigned addresses"
         for obj in self.object_by_name.values():
             if isinstance(obj, Segment):
                 if obj.phys_addr is not None:
-                    print "writing segment", obj.name
                     obj.write_to_image()
 
         # write all other segments
-        print "writing segments without assigned addresses"
         for obj in self.object_by_name.values():
             if isinstance(obj, Segment):
-                print "writing segment", obj.name
                 obj.write_to_image()
 
+    def get_size(self):
+        self.size = self.phys_mem_allocation.highest() + 1
+        return self.size
+
+    def write_to_file(self, f):
+        f.write(self.phys_mem[0:self.size])
+    
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser(description='iAPX 432 Image Builder')
@@ -663,10 +665,14 @@ if __name__ == '__main__':
                             help='architecture definition (XML)')
     arg_parser.add_argument('--list-segments',
                             action='store_true')
-    arg_parser.add_argument('image',
+    arg_parser.add_argument('image_definition',
                             type=argparse.FileType('r', 0),
                             nargs=1,
                             help='image definition (XML)')
+    arg_parser.add_argument('image_binary',
+                            type=argparse.FileType('wb', 0),
+                            nargs=1,
+                            help='image binary output')
 
     args = arg_parser.parse_args()
 
@@ -674,9 +680,24 @@ if __name__ == '__main__':
     args.arch.close()
     arch = Arch(arch_tree)
 
-    image_tree = xml.etree.ElementTree.parse(args.image[0])
-    args.image[0].close()
+    image_tree = xml.etree.ElementTree.parse(args.image_definition[0])
+    args.image_definition[0].close()
     image = Image(arch, image_tree)
+
+    print "assigning coordinates of objects"
+    image.assign_coordinates()
+    
+    print "computing sizes of segments"
+    image.compute_segment_sizes()
+
+    print "writing segments to image"
+    image.write_segments()
+
+    print "image size %06x" % image.get_size()
+
+    print "writing image to output file"
+    image.write_to_file(args.image_binary[0])
+    
 
     print '%d objects in image' % len(image.object_by_coord)
 
