@@ -442,7 +442,7 @@ class Segment(Object):
             self.image.phys_mem_allocation.allocate(size = rounded_size_with_prefix,
                                                     pos = self.phys_addr - 8,
                                                     fixed = True)
-        print "segment %s coord (%d, %d): phys addr %06x, size %d" % (self.name, self.dir_index, self.seg_index, self.phys_addr, self.size)
+        #print "segment %s coord (%d, %d): phys addr %06x, size %d" % (self.name, self.dir_index, self.seg_index, self.phys_addr, self.size)
         # XXX write segment prefix at self.phys_addr - 8
         for field in self.fields:
             field.write_value()
@@ -644,5 +644,6 @@ if __name__ == '__main__':
             print k, d.name
 
     for obj in image.object_by_name.values():
-        if obj.reference_count == 0:
+        if obj.dir_index != 2 and obj.reference_count == 0:
             print "no AD references", obj.name
+
