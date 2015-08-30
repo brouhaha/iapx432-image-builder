@@ -88,6 +88,8 @@ class Field(object):
             self.size = 4
         return self.size
 
+    def write_value(self):
+        assert False
 
 class AD(Field):
     _bool_dict = { 'true': True,
@@ -156,6 +158,7 @@ class AD(Field):
         # should verify it!
 
     def write_value(self):
+        value = 0
         if self.valid:
             if self.segment_name not in self.image.object_by_name:
                 print "can't find segment", self.segment_name
@@ -164,12 +167,21 @@ class AD(Field):
             if self.dir_index is None:
                 self.dir_index = obj.dir_index
                 self.seg_index = obj.seg_index
-            # XXX write value
             obj.reference_count += 1
-            pass
-        else:
-            # XXX write zeros
-            pass
+
+            value = ((self.dir_index        << 20) |
+                     (self.rights['write']  << 19) |
+                     (self.rights['read']   << 18) |
+                     (self.rights['heap']   << 17) |
+                     (self.rights['delete'] << 16) |
+                     (self.seg_index        << 4) |
+                     (self.rights['sys3']   << 3) |
+                     (self.rights['sys2']   << 2) |
+                     (self.rights['sys1']   << 1) |
+                     1)  # valid
+
+        self.segment.data[self.offset:self.offset + 4] = [(value >> (8*i)) & 0xff for i in range(4)]
+
 
 class DataField(Field):
     def __init__(self, segment, field_tree):
@@ -641,7 +653,7 @@ if __name__ == '__main__':
     if args.list_segments:
         for k in sorted(image.object_by_coord.keys()):
             d = image.object_by_coord[k]
-            print k, d.name
+            print "%06x" % d.phys_addr, k, d.name
 
     for obj in image.object_by_name.values():
         if obj.dir_index != 2 and obj.reference_count == 0:
