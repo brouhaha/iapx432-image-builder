@@ -22,6 +22,7 @@ class Allocation(object):
         self.name = name
         self._v = bytearray(size)
         self._z = bytearray(size)  # in Python 3, this could be a bytes object
+        self._o = bytearray([1])
 
     def __str__(self):
         return ' '.join(["%d" % b for b in self._v])
@@ -45,6 +46,9 @@ class Allocation(object):
 
     #def find_space(self, size=1, pos=0, fixed=False):
     #    return self.allocate(size=size, pos=pos, fixed=fixed, dry_run=True)
+
+    def highest(self):
+        return self._v.rfind(self._o)
 
     def discontiguous(self):
         # XXX
@@ -79,7 +83,6 @@ class Field(object):
             self.segment.allocation.allocate(size = self.size,
                                                            pos = self.offset,
                                                            fixed = True)
-            
         self.allocated = True
 
     def compute_size(self):
@@ -157,8 +160,12 @@ class AD(Field):
         # XXX if AD is defined in arch to have a type, we
         # should verify it!
 
+    def compute_size(self):
+        self.size = 4
+        return self.size
+
     def write_value(self):
-        value = 0
+        ad = 0
         if self.valid:
             if self.segment_name not in self.image.object_by_name:
                 print "can't find segment", self.segment_name
@@ -169,18 +176,18 @@ class AD(Field):
                 self.seg_index = obj.seg_index
             obj.reference_count += 1
 
-            value = ((self.dir_index        << 20) |
-                     (self.rights['write']  << 19) |
-                     (self.rights['read']   << 18) |
-                     (self.rights['heap']   << 17) |
-                     (self.rights['delete'] << 16) |
-                     (self.seg_index        << 4) |
-                     (self.rights['sys3']   << 3) |
-                     (self.rights['sys2']   << 2) |
-                     (self.rights['sys1']   << 1) |
-                     1)  # valid
+            ad = ((self.dir_index        << 20) |
+                  (self.rights['write']  << 19) |
+                  (self.rights['read']   << 18) |
+                  (self.rights['heap']   << 17) |
+                  (self.rights['delete'] << 16) |
+                  (self.seg_index        << 4) |
+                  (self.rights['sys3']   << 3) |
+                  (self.rights['sys2']   << 2) |
+                  (self.rights['sys1']   << 1) |
+                  1)  # valid
 
-        self.segment.data[self.offset:self.offset + 4] = [(value >> (8*i)) & 0xff for i in range(4)]
+        self.segment.write_bytes_to_image(self.offset, [(ad >> (8*i)) & 0xff for i in range(4)])
 
 
 class DataField(Field):
@@ -401,7 +408,6 @@ class Segment(Object):
         self.min_size = segment_tree.get('min_size')
         #self.phys_addr = segment_tree.get('phys_addr')  # address of segment prefix
 
-        self.data = bytearray(65536)
         self.allocation = Allocation(65536, self.name)
 
         self.written = False
@@ -417,12 +423,11 @@ class Segment(Object):
         return 1
     
     def compute_size(self):
+        size = 0
         for field in self.fields:
-            field.compute_size()
-            # hack - we really need the sizes computed!
-            if field.size is None:
-                field.size = 4
-
+            fs = field.compute_size()
+            size += fs
+           
         # first allocate fields at fixed offsets
         for field in self.fields:
             if (not field.allocated) and (field.offset is not None):
@@ -436,8 +441,18 @@ class Segment(Object):
             if not field.allocated:
                 field.allocate()
 
-        self.size = max(self.allocation.allocate(dry_run=True), self.min_size, self.abs_min_size())
+        self.size = max(self.allocation.highest() + 1,
+                        self.min_size,
+                        self.abs_min_size())
         return self.size
+
+    def write_bytes_to_image(self, offset, data):
+        assert self.phys_addr is not None
+        if (offset + len(data)) > self.size:
+            print "segment", self.name, "size", self.size, "offset", offset, "len", len(data)
+        assert offset + len(data) <= self.size
+        pa = self.phys_addr + offset
+        self.image.phys_mem[pa:pa + len(data)] = data
 
     def write_to_image(self):
         if self.written:
@@ -455,7 +470,16 @@ class Segment(Object):
                                                     pos = self.phys_addr - 8,
                                                     fixed = True)
         #print "segment %s coord (%d, %d): phys addr %06x, size %d" % (self.name, self.dir_index, self.seg_index, self.phys_addr, self.size)
-        # XXX write segment prefix at self.phys_addr - 8
+
+        # AD image in segment prefix doesn't need any rights bits set
+        ad_image = ((self.dir_index        << 20) |
+                    (self.seg_index        << 4) |
+                    1)  # valid
+        
+        # write segment prefix at self.phys_addr - 8
+        self.write_bytes_to_image(-8, [(ad_image >> (8*i)) & 0xff for i in range(4)])
+        self.write_bytes_to_image(-4, [0 for i in range(4)])
+
         for field in self.fields:
             field.write_value()
 
@@ -586,6 +610,7 @@ class Image(object):
         self.object_by_name = { }
         self.segment_table_directory = None
         self.phys_mem_allocation = Allocation(1 << 24, "phys mem")
+        self.phys_mem = bytearray(1 << 24)
 
         for obj_tree in image_root:
             name = obj_tree.get('name')
@@ -612,16 +637,21 @@ class Image(object):
         for obj in self.object_by_name.values():
             if isinstance(obj, Segment):
                 obj.compute_size()
+                print "segment", obj.name, "size", obj.size
 
         # if segment has a preassigned base address, write it
+        print "writing segments with assigned addresses"
         for obj in self.object_by_name.values():
             if isinstance(obj, Segment):
                 if obj.phys_addr is not None:
+                    print "writing segment", obj.name
                     obj.write_to_image()
 
         # write all other segments
+        print "writing segments without assigned addresses"
         for obj in self.object_by_name.values():
             if isinstance(obj, Segment):
+                print "writing segment", obj.name
                 obj.write_to_image()
 
 
@@ -648,7 +678,7 @@ if __name__ == '__main__':
     args.image[0].close()
     image = Image(arch, image_tree)
 
-    print '%d segments in image' % len(image.object_by_name)
+    print '%d objects in image' % len(image.object_by_coord)
 
     if args.list_segments:
         for k in sorted(image.object_by_coord.keys()):
