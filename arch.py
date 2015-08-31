@@ -71,9 +71,36 @@ class Arch(object):
                 self.parent.field_by_name[self.name] = self
 
     class DataField(Field):
+        def parse_start(self, k, v):
+            self.start = int(v, 0)
+            assert 0 <= self.start <= 65535
+
+        def parse_size(self, k, v):
+            self.size = int(v, 0)
+            assert 1 <= self.size <= 65536
+
+        def parse_type(self, k, v):
+            self.type = v
+        
         def __init__(self, parent, tree):
             super(Arch.DataField, self).__init__(parent)
-
+            d = { 'start': self.parse_start,
+                  'size':  self.parse_size,
+                  'type':  self.parse_type,
+                  'name':  self.parse_name }
+            self.start = None
+            self.size = None
+            self.type = None
+            for k, v in tree.attrib.iteritems():
+                d[k](k, v)
+            if self.start is None:
+                print "no start for field", self.name
+                print tree.attrib
+            assert self.start is not None
+            #assert self.size is not None
+            self.parent.field_by_offset[self.offset] = self
+            if self.name is not None:
+                self.parent.field_by_name[self.name] = self
 
     class SystemRights(object):
         def parse_index(self, k, v):
@@ -98,16 +125,16 @@ class Arch(object):
             self.name = v
 
         def parse_base_type(self, tree, k, v):
-            assert self.arch.is_enumeration_element('base_type', v)
-            self.base_type = v
+            #assert self.arch.is_enumeration_element('base_type', v)
+            self.base_type = self.arch.get_enumeration_value('base_type', v)['value']
 
         def parse_system_type(self, tree, k, v):
-            assert self.arch.is_enumeration_element('system_type', v)
-            self.system_type = v
+            #assert self.arch.is_enumeration_element('system_type', v)
+            self.system_type = self.arch.get_enumeration_value('system_type', v)['value']
 
         def parse_processor_class(self, tree, k, v):
-            assert self.arch.is_enumeration_element('processor_class', v)
-            self.processor_class = v
+            #assert self.arch.is_enumeration_element('processor_class', v)
+            self.processor_class = self.arch.get_enumeration_value('processor_class', v)['value']
 
         def __init__(self, arch, tree):
             self.arch = arch
@@ -118,12 +145,14 @@ class Arch(object):
             self.name = None
             self.base_type = None
             self.system_type = None
-            self.processor_class = 'all'
+            self.processor_class = None
             for k, v in tree.attrib.iteritems():
                 d[k](tree, k, v)
             assert self.name is not None
             assert self.base_type is not None
             assert self.system_type is not None
+            if self.processor_class is None:
+                self.processor_class = self.arch.get_enumeration_value('processor_class', 'all')['value']
             self.system_rights = [None] * 4  # element 0 unused
             self.fields = []
             self.field_by_offset = { }
