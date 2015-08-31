@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Copyright 2014 Eric Smith -->
+<!-- Copyright 2014, 2015 Eric Smith -->
 
 <image>
 
@@ -310,7 +310,7 @@
   </segment>
 
   <segment name="process_1_root_context_data_segment" type="context_data_segment" object_table="process_1_object_table">
-    <field name="c" type="short_ordinal"/>
+    <field name="c" type="short_ordinal" value="0"/>
   </segment>
 
   <segment name="process_1_root_context_access_segment" type="context_access_segment" object_table="process_1_object_table">
