@@ -512,6 +512,10 @@
   <field type="instruction_opcode" name="opcode"/> <!-- zero-length if only one op in class -->
 </struct>
 
+<array name="instructions">
+  <field type="instruction" name="instruction"/>
+</array>
+
 <!-- page 2-12 -->
 <enumeration name="processor_class" size="3">
   <constant name="all"   encoding="0b000"/>
@@ -712,6 +716,10 @@
   <field start="96"  size="32"                 name="reserved_96"/>
 </struct>
 
+<array name="storage_block_descriptor_array">
+  <field type="storage_block_descriptor" name="storage_block_descriptor"/>
+</array>
+
 <!-- page 3-34, page 8-20 -->
 <enumeration name="float_precision" size="2">
   <constant name="temporary_real"    encoding="0b00"/>
@@ -755,6 +763,10 @@
   <field start="16"  size="32" type="queuing_value" name="queuing_value"/>
   <field start="48"  size="16"                      name="reserved_48"/>
 </struct>
+
+<array name="port_message_queue_entry_array">
+  <field type="port_message_queue_entry" name="port_message_queue_entry"/>
+</array>
 
 <!-- page 4-39 -->
 <enumeration name="carried_object_type" size="2">
@@ -998,13 +1010,11 @@
   <field start="0"  size="16" type="ordinal"   name="context_access_segment_length"/>  <!-- minus one -->
   <field start="16" size="16" type="ordinal"   name="context_data_segment_length"/>    <!-- minus one -->
   <field start="32" size="16" type="ordinal"   name="operand_stack_segment_length"/>   <!-- minus one -->
-  <field start="48" size="16" type="ordinal"   name="initial_instruction_displacement"/>
+  <field start="48" size="16" type="label"     name="initial_instruction_displacement"/>
   <field start="64" size="16" type="ordinal"   name="data_constants_segment_index"/>
   <field start="80" size="16" type="ordinal"   name="fault_object_index_in_domain"/>
   <field start="96" size="16" type="ordinal"   name="trace_object_index_in_domain"/>
-  <array start="112" name="instructions">
-    <field type="instruction"/>
-  </array>
+  <field start="112" type="instruction_array"  name="instructions"/>
 </segment>
 
 <!-- Figure 3-13 on page 3-28 and Figure 8-2 on page 8-2 -->
@@ -1119,9 +1129,7 @@
   <field start="64"  size="16" type="ordinal"     name="tail_message_in_buffer"/>
   <field start="80"  size="16" type="ordinal"     name="port_time"/>
   <field start="96"  size="32"                    name="reserved_96"/>
-  <array start="128" name="port_message_queue">
-    <field size="64" type="port_message_queue_entry" name="port_message_queue_entry"/>
-  </array>
+  <field start="128" type="port_message_queue_entry_array" name="port_message_queue"/>
 </segment>
 
 <!-- Figure 4-17 on page 4-28 and Figure 6-18 on page 6-38 -->
@@ -1175,9 +1183,7 @@
   <field start="36"  size="12" type="ordinal"     name="current_block_index"/>
   <field start="48"  size="16" type="object_lock" name="object_lock"/>
   <field start="64"  size="64"                    name="preserved_64"/>
-  <array start="128" name="storage_block_descriptor_area">
-    <field size="128" type="storage_block_descriptor" name="storage_block_descriptor"/>
-  </array>
+  <field start="128" type="storage_block_descriptor_array" name="storage_block_descriptor_area"/>
 </segment>
 
 <!-- Figure 2-13 on page 2-32, Table 2-2 on page 2-33 -->
