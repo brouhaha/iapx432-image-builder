@@ -22,12 +22,12 @@ class Allocation(object):
         self.name = name
         self._v = bytearray(size)
         self._z = bytearray(size)  # in Python 3, this could be a bytes object
-        self._o = bytearray([1])
+        self._ff = bytearray([0xff])
 
     def __str__(self):
         return ' '.join(["%d" % b for b in self._v])
 
-    def allocate(self, size=1, pos=0, fixed=False, dry_run=False):
+    def allocate_bytes(self, size=1, pos=0, fixed=False, dry_run=False):
         #print "allocating from:", self.name, "size:", size, "pos:", pos, "fixed:", fixed, "dry_run:", dry_run
         if not fixed:
             pos = self._v.find(self._z[:size], pos)
@@ -40,15 +40,15 @@ class Allocation(object):
             #print [int(x) for x in self._v[pos:pos+size]]
             raise self.AllocationError()
         if not dry_run:
-            self._v[pos:pos+size] = [1] * size
+            self._v[pos:pos+size] = [0xff] * size
         #print "returning pos", pos
         return pos
 
     #def find_space(self, size=1, pos=0, fixed=False):
     #    return self.allocate(size=size, pos=pos, fixed=fixed, dry_run=True)
 
-    def highest(self):
-        return self._v.rfind(self._o)
+    def highest_byte(self):
+        return self._v.rfind(self._ff)
 
     def discontiguous(self):
         # XXX
@@ -87,11 +87,11 @@ class Field(object):
             print self
         assert self.size is not None
         if self.offset is None:
-            self.offset = self.segment.allocation.allocate(size = self.size)
+            self.offset = self.segment.allocation.allocate_bytes(size = self.size)
         else:
-            self.segment.allocation.allocate(size = self.size,
-                                                           pos = self.offset,
-                                                           fixed = True)
+            self.segment.allocation.allocate_bytes(size = self.size,
+                                                   pos = self.offset,
+                                                   fixed = True)
         self.allocated = True
 
     def compute_size(self):
@@ -419,8 +419,8 @@ class Object(object):
             else:
                 seg_table = self.image.object_by_coord[(2, self.dir_index)]
             if self.seg_index is None:
-                self.seg_index = seg_table.allocation.allocate(size=16,
-                                                               dry_run=True) / 16
+                self.seg_index = seg_table.allocation.allocate_bytes(size=16,
+                                                                     dry_run=True) / 16
             self.ote = self.create_object_descriptor(seg_table)
             self.ote.allocate()
             assert self.seg_index == self.ote.offset / 16
@@ -569,7 +569,7 @@ class Segment(Object):
             if not field.allocated:
                 field.allocate()
 
-        self.size = max(self.allocation.highest() + 1,
+        self.size = max(self.allocation.highest_byte() + 1,
                         self.min_size,
                         self.abs_min_size())
         return self.size
@@ -583,12 +583,12 @@ class Segment(Object):
         rounded_size_with_prefix = 8 + ((self.size + 7) & ~7)
         #print "segment %s orig size %d rounded with prefix %d" % (self.name, self.size, rounded_size_with_prefix)
         if self.phys_addr is None:
-            self.phys_addr = self.image.phys_mem_allocation.allocate(size = rounded_size_with_prefix) + 8
+            self.phys_addr = self.image.phys_mem_allocation.allocate_bytes(size = rounded_size_with_prefix) + 8
         else:
             # segment is at specified address
-            self.image.phys_mem_allocation.allocate(size = rounded_size_with_prefix,
-                                                    pos = self.phys_addr - 8,
-                                                    fixed = True)
+            self.image.phys_mem_allocation.allocate_bytes(size = rounded_size_with_prefix,
+                                                          pos = self.phys_addr - 8,
+                                                          fixed = True)
         #print "segment %s coord (%d, %d): phys addr %06x, size %d" % (self.name, self.dir_index, self.seg_index, self.phys_addr, self.size)
         self.phys_allocated = True
 
@@ -811,7 +811,7 @@ class Image(object):
                 obj.write_to_image()
 
     def get_size(self):
-        self.size = self.phys_mem_allocation.highest() + 1
+        self.size = self.phys_mem_allocation.highest_byte() + 1
         return self.size
 
     def write_to_file(self, f):
