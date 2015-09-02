@@ -47,8 +47,8 @@ class Allocation(object):
     #def find_space(self, size=1, pos=0, fixed=False):
     #    return self.allocate(size=size, pos=pos, fixed=fixed, dry_run=True)
 
-    def highest_byte(self):
-        return self._v.rfind(self._ff)
+    def highest_allocated_byte(self):
+        return len(self._v.rstrip(self._z[0:1])) - 1
 
     def discontiguous(self):
         # XXX
@@ -569,7 +569,7 @@ class Segment(Object):
             if not field.allocated:
                 field.allocate()
 
-        self.size = max(self.allocation.highest_byte() + 1,
+        self.size = max(self.allocation.highest_allocated_byte() + 1,
                         self.min_size,
                         self.abs_min_size())
         return self.size
@@ -811,7 +811,7 @@ class Image(object):
                 obj.write_to_image()
 
     def get_size(self):
-        self.size = self.phys_mem_allocation.highest_byte() + 1
+        self.size = self.phys_mem_allocation.highest_allocated_byte() + 1
         return self.size
 
     def write_to_file(self, f):
@@ -857,7 +857,8 @@ if __name__ == '__main__':
     print "writing segments to image"
     image.write_segments()
 
-    print "image size %06x" % image.get_size()
+    image_size = image.get_size()
+    print "image size %d (0x%06x)" % (image_size, image_size)
 
     print "writing image to output file"
     image.write_to_file(args.image_binary[0])
