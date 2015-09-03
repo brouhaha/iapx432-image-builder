@@ -51,7 +51,7 @@ class Arch(object):
         def parse_index(self, k, v):
             index = int(v)
             assert 0 <= index <= 16383
-            self.offset = 4 * index
+            self.offset = 32 * index
         
         def parse_type(self, k, v):
             pass
@@ -62,7 +62,7 @@ class Arch(object):
                   'name': self.parse_name,
                   'type': self.parse_type }
             self.type = None
-            self.size = 4
+            self.size = 32 # bits
             for k, v in tree.attrib.iteritems():
                 d[k](k, v)
             assert self.offset is not None
@@ -71,32 +71,30 @@ class Arch(object):
                 self.parent.field_by_name[self.name] = self
 
     class DataField(Field):
-        def parse_start(self, k, v):
-            self.start = int(v, 0)
-            assert 0 <= self.start <= 65535
+        def parse_offset(self, k, v):
+            self.offset = int(v, 0)
+            assert 0 <= self.offset < (1 << 19)
 
         def parse_size(self, k, v):
             self.size = int(v, 0)
-            assert 1 <= self.size <= 65536
+            assert 1 <= self.size <= (1 << 19)
 
         def parse_type(self, k, v):
             self.type = v
         
         def __init__(self, parent, tree):
             super(Arch.DataField, self).__init__(parent)
-            d = { 'start': self.parse_start,
+            d = { 'offset': self.parse_offset,
                   'size':  self.parse_size,
                   'type':  self.parse_type,
                   'name':  self.parse_name }
-            self.start = None
-            self.size = None
             self.type = None
             for k, v in tree.attrib.iteritems():
                 d[k](k, v)
-            if self.start is None:
-                print "no start for field", self.name
+            if self.offset is None:
+                print "no offset for field", self.name
                 print tree.attrib
-            assert self.start is not None
+            assert self.offset is not None
             #assert self.size is not None
             self.parent.field_by_offset[self.offset] = self
             if self.name is not None:
