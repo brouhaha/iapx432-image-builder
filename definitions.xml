@@ -378,14 +378,14 @@
 
 <!-- Table 11-5 on page 11-35 -->
 <struct name="short_object_selector" size="6">
-  <field start="0" size="2"  type="ordinal" name="entered_access_segment"/>
-  <field start="2" size="4"  type="ordinal" name="slot"/>
+  <field offset="0" size="2"  type="ordinal" name="entered_access_segment"/>
+  <field offset="2" size="4"  type="ordinal" name="slot"/>
 </struct>
 
 <!-- Figure 8-11 on page 8-11, Table 11-6 on page 11-37 -->
 <struct name="object_selector" size="16">
-  <field start="0" size="2"  type="ordinal" name="entered_access_segment"/>
-  <field start="2" size="14" type="ordinal" name="slot"/>
+  <field offset="0" size="2"  type="ordinal" name="entered_access_segment"/>
+  <field offset="2" size="14" type="ordinal" name="slot"/>
 </struct>
 
 <union name="var_object_selector" size="var">
@@ -396,7 +396,7 @@
 <union name="data_reference_segment" size="var">
   <field type="short_object_selector"            name="short_direct"/>
   <field type="long_object_selector"             name="long_direct"/>
-  <field start="0" size="0"                      name="operand_stack_indirect"/>
+  <field offset="0" size="0"                      name="operand_stack_indirect"/>
   <field type="general_indirect_object_selector" name="general_indirect"/>
 </union>
 
@@ -551,23 +551,23 @@
 
 <!-- Figure 7-13 on page 7-21 -->
 <struct name="bit_field_descriptor" size="16">
-  <field start="0" size="8" type="ordinal" name="beginning_bit_number"/>
-  <field start="8" size="8" type="ordinal" name="field_length"/> <!-- minus one -->
+  <field offset="0" size="8" type="ordinal" name="beginning_bit_number"/>
+  <field offset="8" size="8" type="ordinal" name="field_length"/> <!-- minus one -->
 </struct>
 
 <!-- Figure 2-7 on page 2-14 -->
 <!-- an access_segment contains only access_descriptors -->
 <struct name="access_descriptor" size="32">
-  <field start="0"  size="1"  type="boolean" name="valid"/>
-  <field start="1"  size="1"  type="boolean" name="system_rights_1"/>
-  <field start="2"  size="1"  type="boolean" name="system_rights_2"/>
-  <field start="3"  size="1"  type="boolean" name="system_rights_3"/>
-  <field start="4"  size="12" type="ordinal" name="segment_index"/>
-  <field start="16" size="1"  type="boolean" name="delete_rights"/>
-  <field start="17" size="1"  type="boolean" name="heap_flag"/>
-  <field start="18" size="1"  type="boolean" name="read_rights"/>
-  <field start="19" size="1"  type="boolean" name="write_rights"/>
-  <field start="20" size="12" type="ordinal" name="directory_index"/>
+  <field offset="0"  size="1"  type="boolean" name="valid"/>
+  <field offset="1"  size="1"  type="boolean" name="system_rights_1"/>
+  <field offset="2"  size="1"  type="boolean" name="system_rights_2"/>
+  <field offset="3"  size="1"  type="boolean" name="system_rights_3"/>
+  <field offset="4"  size="12" type="ordinal" name="segment_index"/>
+  <field offset="16" size="1"  type="boolean" name="delete_rights"/>
+  <field offset="17" size="1"  type="boolean" name="heap_flag"/>
+  <field offset="18" size="1"  type="boolean" name="read_rights"/>
+  <field offset="19" size="1"  type="boolean" name="write_rights"/>
+  <field offset="20" size="12" type="ordinal" name="directory_index"/>
 </struct>
 
 <!-- Table 2-1 on page 2-18 and page 12-17 -->
@@ -580,10 +580,10 @@
 
 <!-- page 12-17 -->
 <struct name="fault_object_descriptor_type" size="5">
-  <field start="0"   size="2"  type="descriptor_type" name="descriptor_type"/>
-  <field start="2"   size="1"  type="boolean"         name="valid"/>
-  <field start="3"   size="1"  type="base_type"       name="base_type"/>
-  <field start="4"   size="1"  type="boolean"         name="storage_associated"/>
+  <field offset="0"   size="2"  type="descriptor_type" name="descriptor_type"/>
+  <field offset="2"   size="1"  type="boolean"         name="valid"/>
+  <field offset="3"   size="1"  type="base_type"       name="base_type"/>
+  <field offset="4"   size="1"  type="boolean"         name="storage_associated"/>
 </struct>
 
 <!-- page 12-19 -->
@@ -596,106 +596,106 @@
 
 <!-- Figure 2-9 on page 2-24 -->
 <struct name="object_table_header" size="128">
-  <field start="0"   size="2"  type="descriptor_type" name="descriptor_type" value="free"/>
-  <field start="2"   size="1"                         name="preserved_2"        value="0b0"/>
-  <field start="3"   size="2"  type="constant"        name="descriptor_subtype" value="0b00"/>
-  <field start="5"   size="11"                        name="preserved_5"/>
-  <field start="16"  size="4"                         name="reserved_16"/>
-  <field start="20"  size="12" type="ordinal"         name="free_index"/>
-  <field start="32"  size="4"                         name="reserved_32"/>
-  <field start="36"  size="12" type="ordinal"         name="end_index"/>
-  <field start="48"  size="16" type="ordinal"         name="fault_level_number"/>
-  <field start="64"  size="8"                         name="preserved_64"/>
-  <field start="72"  size="1"  type="boolean"         name="reclamation"/>
-  <field start="73"  size="7"                         name="reserved_73"/>
-  <field start="80"  size="16" type="ordinal"         name="level_number"/>
-  <field start="96"  size="32" type="ordinal"         name="storage_claim"      default="0xffffffff"/>
+  <field offset="0"   size="2"  type="descriptor_type" name="descriptor_type" value="free"/>
+  <field offset="2"   size="1"                         name="preserved_2"        value="0b0"/>
+  <field offset="3"   size="2"  type="constant"        name="descriptor_subtype" value="0b00"/>
+  <field offset="5"   size="11"                        name="preserved_5"/>
+  <field offset="16"  size="4"                         name="reserved_16"/>
+  <field offset="20"  size="12" type="ordinal"         name="free_index"/>
+  <field offset="32"  size="4"                         name="reserved_32"/>
+  <field offset="36"  size="12" type="ordinal"         name="end_index"/>
+  <field offset="48"  size="16" type="ordinal"         name="fault_level_number"/>
+  <field offset="64"  size="8"                         name="preserved_64"/>
+  <field offset="72"  size="1"  type="boolean"         name="reclamation"/>
+  <field offset="73"  size="7"                         name="reserved_73"/>
+  <field offset="80"  size="16" type="ordinal"         name="level_number"/>
+  <field offset="96"  size="32" type="ordinal"         name="storage_claim"      default="0xffffffff"/>
 </struct>
 
 <!-- Figure 2-10 on page 2-27 -->
 <struct name="free_descriptor" size="128">
-  <field start="0"   size="2"  type="constant" name="descriptor_type"    value="0b00"/>
-  <field start="2"   size="1"                  name="preserved_2"        value="0b1"/>
-  <field start="3"   size="2"  type="constant" name="descriptor_subtype" value="0b00"/>
-  <field start="5"   size="11"                 name="preserved_5"/>
-  <field start="16"  size="4"                  name="reserved_16"/>
-  <field start="20"  size="12" type="ordinal"  name="free_index"/>
-  <field start="32"  size="32"                 name="preserved_32"/>
-  <field start="64"  size="8"                  name="preserved_64"/>
-  <field start="72"  size="1"  type="boolean"  name="reclamation"/>
-  <field start="73"  size="7"                  name="reserved_73"/>
-  <field start="80"  size="48"                 name="preserved_80"/>
+  <field offset="0"   size="2"  type="constant" name="descriptor_type"    value="0b00"/>
+  <field offset="2"   size="1"                  name="preserved_2"        value="0b1"/>
+  <field offset="3"   size="2"  type="constant" name="descriptor_subtype" value="0b00"/>
+  <field offset="5"   size="11"                 name="preserved_5"/>
+  <field offset="16"  size="4"                  name="reserved_16"/>
+  <field offset="20"  size="12" type="ordinal"  name="free_index"/>
+  <field offset="32"  size="32"                 name="preserved_32"/>
+  <field offset="64"  size="8"                  name="preserved_64"/>
+  <field offset="72"  size="1"  type="boolean"  name="reclamation"/>
+  <field offset="73"  size="7"                  name="reserved_73"/>
+  <field offset="80"  size="48"                 name="preserved_80"/>
 </struct>
 
 <!-- Figure E-1 on page E-1 -->
 <struct name="interconnect_descriptor" size="128">
-  <field start="0"   size="2"  type="constant" name="descriptor_type"    value="0b00"/>
-  <field start="2"   size="1"                  name="preserved_2"/>
-  <field start="3"   size="2"  type="constant" name="descriptor_subtype" value="0b01"/>
-  <field start="5"   size="1"  type="boolean"  name="input_output_lock"/>
-  <field start="6"   size="1"  type="boolean"  name="altered"/>
-  <field start="7"   size="1"  type="boolean"  name="accessed"/>
-  <field start="8"   size="24" type="ordinal"  name="segment_base_address"/>
-  <field start="32"  size="16" type="ordinal"  name="segment_length"/>  <!-- minus one -->
-  <field start="48"  size="24"                 name="preserved_48"/>
-  <field start="72"  size="1"  type="boolean"  name="reclamation"/>
-  <field start="73"  size="7"                  name="reserved_73"/>
-  <field start="80"  size="16" type="ordinal"  name="level_number"/>
-  <field start="96"  size="32"                 name="preserved_96"/>
+  <field offset="0"   size="2"  type="constant" name="descriptor_type"    value="0b00"/>
+  <field offset="2"   size="1"                  name="preserved_2"/>
+  <field offset="3"   size="2"  type="constant" name="descriptor_subtype" value="0b01"/>
+  <field offset="5"   size="1"  type="boolean"  name="input_output_lock"/>
+  <field offset="6"   size="1"  type="boolean"  name="altered"/>
+  <field offset="7"   size="1"  type="boolean"  name="accessed"/>
+  <field offset="8"   size="24" type="ordinal"  name="segment_base_address"/>
+  <field offset="32"  size="16" type="ordinal"  name="segment_length"/>  <!-- minus one -->
+  <field offset="48"  size="24"                 name="preserved_48"/>
+  <field offset="72"  size="1"  type="boolean"  name="reclamation"/>
+  <field offset="73"  size="7"                  name="reserved_73"/>
+  <field offset="80"  size="16" type="ordinal"  name="level_number"/>
+  <field offset="96"  size="32"                 name="preserved_96"/>
 </struct>
 
 <!-- Figure 7-18 on page 7-47 -->
 <struct name="extended_type_descriptor" size="128">
-  <field start="0"   size="2"  type="constant"          name="descriptor_type"    value="0b01"/>
-  <field start="2"   size="1"  type="boolean"           name="valid"/>
-  <field start="3"   size="1"  type="boolean"           name="private"/>
-  <field start="4"   size="28"                          name="preserved_4"/>
-  <field start="32"  size="32" type="access_descriptor" name="tdo"/>
-  <field start="64"  size="8"                           name="preserved_64"/>
-  <field start="72"  size="1"  type="boolean"           name="reclamation"/>
-  <field start="73"  size="7"                           name="reserved_73"/>
-  <field start="80"  size="16" type="ordinal"           name="level_number"/>
-  <field start="32"  size="32" type="access_descriptor" name="extended_type_object"/>
+  <field offset="0"   size="2"  type="constant"          name="descriptor_type"    value="0b01"/>
+  <field offset="2"   size="1"  type="boolean"           name="valid"/>
+  <field offset="3"   size="1"  type="boolean"           name="private"/>
+  <field offset="4"   size="28"                          name="preserved_4"/>
+  <field offset="32"  size="32" type="access_descriptor" name="tdo"/>
+  <field offset="64"  size="8"                           name="preserved_64"/>
+  <field offset="72"  size="1"  type="boolean"           name="reclamation"/>
+  <field offset="73"  size="7"                           name="reserved_73"/>
+  <field offset="80"  size="16" type="ordinal"           name="level_number"/>
+  <field offset="32"  size="32" type="access_descriptor" name="extended_type_object"/>
 </struct>
 
 <!-- Figure 7-2 on page 7-56 -->
 <struct name="refinement_descriptor" size="128">
-  <field start="0"   size="2"  type="constant"          name="descriptor_type"    value="0b10"/>
-  <field start="2"   size="1"  type="boolean"           name="valid"/>
-  <field start="3"   size="1"  type="base_type"         name="base_type"/>
-  <field start="4"   size="12" type="ordinal"           name="bypass_segment_index"/>
-  <field start="16"  size="4"                           name="preserved_16"/>
-  <field start="20"  size="12" type="ordinal"           name="bypass_directory_index"/>
-  <field start="32"  size="16" type="ordinal"           name="refinement_length"/>
-  <field start="48"  size="16" type="ordinal"           name="base_displacement"/>
-  <field start="64"  size="5"  type="system_type"       name="system_type"/>
-  <field start="69"  size="3"  type="processor_class"   name="processor_class"/>
-  <field start="72"  size="1"  type="boolean"           name="reclamation"/>
-  <field start="73"  size="7"                           name="reserved_73"/>
-  <field start="80"  size="16" type="ordinal"           name="level_number"/>
-  <field start="96"  size="32" type="access_descriptor" name="sourceobject"/>
+  <field offset="0"   size="2"  type="constant"          name="descriptor_type"    value="0b10"/>
+  <field offset="2"   size="1"  type="boolean"           name="valid"/>
+  <field offset="3"   size="1"  type="base_type"         name="base_type"/>
+  <field offset="4"   size="12" type="ordinal"           name="bypass_segment_index"/>
+  <field offset="16"  size="4"                           name="preserved_16"/>
+  <field offset="20"  size="12" type="ordinal"           name="bypass_directory_index"/>
+  <field offset="32"  size="16" type="ordinal"           name="refinement_length"/>
+  <field offset="48"  size="16" type="ordinal"           name="base_displacement"/>
+  <field offset="64"  size="5"  type="system_type"       name="system_type"/>
+  <field offset="69"  size="3"  type="processor_class"   name="processor_class"/>
+  <field offset="72"  size="1"  type="boolean"           name="reclamation"/>
+  <field offset="73"  size="7"                           name="reserved_73"/>
+  <field offset="80"  size="16" type="ordinal"           name="level_number"/>
+  <field offset="96"  size="32" type="access_descriptor" name="sourceobject"/>
 </struct>
 
 <!-- a storage descriptor points to an actual segment in memory -->
 <!-- Figure 2-8 on page 2-19 -->
 <struct name="storage_descriptor" size="128">
-  <field start="0"   size="2"  type="constant"        name="descriptor_type" value="0b11"/>
-  <field start="2"   size="1"  type="boolean"         name="valid"/>
-  <field start="3"   size="1"  type="base_type"       name="base_type"/>
-  <field start="4"   size="1"  type="boolean"         name="storage_associated"/>
-  <field start="5"   size="1"  type="boolean"         name="input_output_lock"/>
-  <field start="6"   size="1"  type="boolean"         name="altered"/>
-  <field start="7"   size="1"  type="boolean"         name="accessed"/>
-  <field start="8"   size="24" type="ordinal"         name="segment_base_address"/>
-  <field start="32"  size="16" type="ordinal"         name="segment_length"/>  <!-- minus one -->
-  <field start="48"  size="16"                        name="preserved_48"/>
-  <field start="64"  size="5"  type="system_type"     name="system_type"/>
-  <field start="69"  size="3"  type="processor_class" name="processor_class"/>
-  <field start="72"  size="1"  type="boolean"         name="reclamation"/>
-  <field start="73"  size="7"                         name="reserved_73"/>
-  <field start="80"  size="16" type="ordinal"         name="level_number"/>
-  <field start="96"  size="1"  type="boolean"         name="dirty"/>
-  <field start="97"  size="31"                        name="preserved_97"/>
+  <field offset="0"   size="2"  type="constant"        name="descriptor_type" value="0b11"/>
+  <field offset="2"   size="1"  type="boolean"         name="valid"/>
+  <field offset="3"   size="1"  type="base_type"       name="base_type"/>
+  <field offset="4"   size="1"  type="boolean"         name="storage_associated"/>
+  <field offset="5"   size="1"  type="boolean"         name="input_output_lock"/>
+  <field offset="6"   size="1"  type="boolean"         name="altered"/>
+  <field offset="7"   size="1"  type="boolean"         name="accessed"/>
+  <field offset="8"   size="24" type="ordinal"         name="segment_base_address"/>
+  <field offset="32"  size="16" type="ordinal"         name="segment_length"/>  <!-- minus one -->
+  <field offset="48"  size="16"                        name="preserved_48"/>
+  <field offset="64"  size="5"  type="system_type"     name="system_type"/>
+  <field offset="69"  size="3"  type="processor_class" name="processor_class"/>
+  <field offset="72"  size="1"  type="boolean"         name="reclamation"/>
+  <field offset="73"  size="7"                         name="reserved_73"/>
+  <field offset="80"  size="16" type="ordinal"         name="level_number"/>
+  <field offset="96"  size="1"  type="boolean"         name="dirty"/>
+  <field offset="97"  size="31"                        name="preserved_97"/>
 </struct>
 
 <union name="descriptor" size="128">
@@ -708,12 +708,12 @@
 
 <!-- Figure 2-11 on page 2-29 -->
 <struct name="storage_block_descriptor" size="128">
-  <field start="0"   size="32" type="ordinal"  name="base_address"/>
-  <field start="32"  size="32" type="ordinal"  name="end_address"/>
-  <field start="64"  size="1"  type="boolean"  name="last_block"/>
-  <field start="65"  size="1"  type="boolean"  name="dirty"/>
-  <field start="66"  size="30"                 name="preserved_66"/>
-  <field start="96"  size="32"                 name="reserved_96"/>
+  <field offset="0"   size="32" type="ordinal"  name="base_address"/>
+  <field offset="32"  size="32" type="ordinal"  name="end_address"/>
+  <field offset="64"  size="1"  type="boolean"  name="last_block"/>
+  <field offset="65"  size="1"  type="boolean"  name="dirty"/>
+  <field offset="66"  size="30"                 name="preserved_66"/>
+  <field offset="96"  size="32"                 name="reserved_96"/>
 </struct>
 
 <array name="storage_block_descriptor_array">
@@ -737,31 +737,31 @@
 
 <!-- Figure 3-15 on page 3-34, Figure 8-20 on page 8-20 -->
 <struct name="context_status" size="16">
-  <field start="0"  size="1"  type="boolean"             name="faulted"/>
-  <field start="1"  size="10"                            name="preserved_1"/>
-  <field start="11" size="1"  type="boolean"             name="fault_on_inexact"/>
-  <field start="12" size="2"  type="float_precision"     name="float_precision_control"/>
-  <field start="14" size="2"  type="float_rounding_mode" name="float_rounding_control"/>
+  <field offset="0"  size="1"  type="boolean"             name="faulted"/>
+  <field offset="1"  size="10"                            name="preserved_1"/>
+  <field offset="11" size="1"  type="boolean"             name="fault_on_inexact"/>
+  <field offset="12" size="2"  type="float_precision"     name="float_precision_control"/>
+  <field offset="14" size="2"  type="float_rounding_mode" name="float_rounding_control"/>
 </struct>
 
 <!-- Figure 3-16 on page 3-36 -->
 <struct name="trace_information_area" size="40">
-  <field start="0"   size="16"  type="ordinal" name="trace_object_index"/>
-  <field start="16"  size="16"  type="ordinal" name="trace_ip"/>
-  <field start="24"  size="16"  type="ordinal" name="trace_event_code"/> <!-- operator_id, all 1s for fault -->
+  <field offset="0"   size="16"  type="ordinal" name="trace_object_index"/>
+  <field offset="16"  size="16"  type="ordinal" name="trace_ip"/>
+  <field offset="24"  size="16"  type="ordinal" name="trace_event_code"/> <!-- operator_id, all 1s for fault -->
 </struct>
 
 <!-- Figure 4-20 on page 4-32, and page 4-49 -->
 <struct name="queuing_value" size="32">
-  <field start="16"  size="16" type="ordinal" name="deadline"/>
-  <field start="32"  size="16" type="ordinal" name="priority"/>
+  <field offset="16"  size="16" type="ordinal" name="deadline"/>
+  <field offset="32"  size="16" type="ordinal" name="priority"/>
 </struct>
 
 <!-- Figure 4-20 on page 4-32 and Figure 6-21 on page 6-42 -->
 <struct name="port_message_queue_entry" size="64">
-  <field start="0"   size="16" type="ordinal"       name="next_entry_displacement"/>
-  <field start="16"  size="32" type="queuing_value" name="queuing_value"/>
-  <field start="48"  size="16"                      name="reserved_48"/>
+  <field offset="0"   size="16" type="ordinal"       name="next_entry_displacement"/>
+  <field offset="16"  size="32" type="queuing_value" name="queuing_value"/>
+  <field offset="48"  size="16"                      name="reserved_48"/>
 </struct>
 
 <array name="port_message_queue_entry_array">
@@ -777,10 +777,10 @@
 
 <!-- Figure 4-23 on page 4-39 and Figure 6-24 on page 6-48 -->
 <struct name="carrier_status" size="16">
-  <field start="0"  size="2"  type="carried_object_type" name="carried_object_type"/>
-  <field start="2"  size="1"  type="boolean"             name="message_received"/>
-  <field start="3"  size="1"  type="boolean"             name="not_receive_queued"/>
-  <field start="4"  size="12"                            name="preserved_4"/>
+  <field offset="0"  size="2"  type="carried_object_type" name="carried_object_type"/>
+  <field offset="2"  size="1"  type="boolean"             name="message_received"/>
+  <field offset="3"  size="1"  type="boolean"             name="not_receive_queued"/>
+  <field offset="4"  size="12"                            name="preserved_4"/>
 </struct>
 
 <!-- page 5-10, 6-32, 7-18 -->
@@ -793,8 +793,8 @@
 
 <!-- Figure 5-6 on page 5-10, Figure 6-14 on page 6-32, Figure 7-12 on page 7-17 -->
 <struct name="object_lock" size="16">
-  <field start="0"   size="2"  type="lock_type" name="lock_type"/>
-  <field start="2"   size="14" type="ordinal"   name="locker_id"/>
+  <field offset="0"   size="2"  type="lock_type" name="lock_type"/>
+  <field offset="2"   size="14" type="ordinal"   name="locker_id"/>
 </struct>
 
 <!-- page 5-16 -->
@@ -807,38 +807,38 @@
 
 <!-- Figure 5-9 on page 5-15 -->
 <struct name="process_status" size="16">
-  <field start="0"   size="1"   type="boolean"    name="bound"/>
-  <field start="1"   size="1"   type="boolean"    name="faulted"/>
-  <field start="2"   size="1"   type="boolean"    name="waiting_for_message"/>
-  <field start="3"   size="1"   type="boolean"    name="fault_vector_mode"/>
-  <field start="4"   size="2"   type="trace_mode" name="trace_mode"/>
-  <field start="6"   size="1"   type="boolean"    name="trace_enable"/>
-  <field start="7"   size="8"                     name="preserved_7"/>
-  <field start="15"  size="1"   type="boolean"    name="first_port_operation_complete"/>
+  <field offset="0"   size="1"   type="boolean"    name="bound"/>
+  <field offset="1"   size="1"   type="boolean"    name="faulted"/>
+  <field offset="2"   size="1"   type="boolean"    name="waiting_for_message"/>
+  <field offset="3"   size="1"   type="boolean"    name="fault_vector_mode"/>
+  <field offset="4"   size="2"   type="trace_mode" name="trace_mode"/>
+  <field offset="6"   size="1"   type="boolean"    name="trace_enable"/>
+  <field offset="7"   size="8"                     name="preserved_7"/>
+  <field offset="15"  size="1"   type="boolean"    name="first_port_operation_complete"/>
 </struct>
 
 <!-- Figure 5-7 on page 5-11 -->
 <struct name="local_sro_data" size="240">
-  <field start="0"   size="16"  type="ordinal"                  name="begining_block_index"/>
-  <field start="16"  size="16"  type="ordinal"                  name="ending_block_index"/>
-  <field start="32"  size="16"  type="object_lock"              name="sro_lock"/>
-  <field start="48"  size="32"  type="access_descriptor"        name="new_ad_copy"/>
-  <field start="80"  size="32"                                  name="reserved_80"/>
-  <field start="112" size="128" type="storage_block_descriptor" name="storage_block_descriptor"/>
+  <field offset="0"   size="16"  type="ordinal"                  name="begining_block_index"/>
+  <field offset="16"  size="16"  type="ordinal"                  name="ending_block_index"/>
+  <field offset="32"  size="16"  type="object_lock"              name="sro_lock"/>
+  <field offset="48"  size="32"  type="access_descriptor"        name="new_ad_copy"/>
+  <field offset="80"  size="32"                                  name="reserved_80"/>
+  <field offset="112" size="128" type="storage_block_descriptor" name="storage_block_descriptor"/>
 </struct>
 
 <!-- Figure 5-8 on page 5-13 -->
 <struct name="process_control_information" size="640">
-  <field start="0"   size="16"  type="ordinal"                  name="period_count"/>
-  <field start="16"  size="16"  type="ordinal"                  name="service_period"/>
-  <field start="32"  size="16"  type="process_status"           name="process_status"/>
-  <field start="48"  size="32"  type="ordinal"                  name="process_clock"/>
-  <field start="80"  size="16"  type="ordinal"                  name="process_id"/> <!-- low two bits must be zero -->
-  <field start="96"  size="48"                                  name="reserved_80"/>
-  <field start="144" size="16"  type="ordinal"                  name="entry_access_segment_1_level_number"/>
-  <field start="160" size="16"  type="ordinal"                  name="entry_access_segment_2_level_number"/>
-  <field start="176" size="16"  type="ordinal"                  name="entry_access_segment_3_level_number"/>
-  <field start="192" size="64"                                  name="reserved_192"/>
+  <field offset="0"   size="16"  type="ordinal"                  name="period_count"/>
+  <field offset="16"  size="16"  type="ordinal"                  name="service_period"/>
+  <field offset="32"  size="16"  type="process_status"           name="process_status"/>
+  <field offset="48"  size="32"  type="ordinal"                  name="process_clock"/>
+  <field offset="80"  size="16"  type="ordinal"                  name="process_id"/> <!-- low two bits must be zero -->
+  <field offset="96"  size="48"                                  name="reserved_80"/>
+  <field offset="144" size="16"  type="ordinal"                  name="entry_access_segment_1_level_number"/>
+  <field offset="160" size="16"  type="ordinal"                  name="entry_access_segment_2_level_number"/>
+  <field offset="176" size="16"  type="ordinal"                  name="entry_access_segment_3_level_number"/>
+  <field offset="192" size="64"                                  name="reserved_192"/>
 </struct>
 
 <!-- page 6-33 -->
@@ -862,11 +862,11 @@
 
 <!-- Figure 6-15 on page 6-33 -->
 <struct name="processor_status" size="16">
-  <field start="0"   size="4"   type="processor_state"  name="processor_state"/>
-  <field start="4"   size="2"   type="dispatching_mode" name="dispatching_mode"/>
-  <field start="6"   size="1"   type="boolean"          name="stopped_by_ipc"/>
-  <field start="7"   size="1"   type="boolean"          name="broadcast_acceptance"/>
-  <field start="8"   size="8"   type="ordinal"          name="processor_id"/>
+  <field offset="0"   size="4"   type="processor_state"  name="processor_state"/>
+  <field offset="4"   size="2"   type="dispatching_mode" name="dispatching_mode"/>
+  <field offset="6"   size="1"   type="boolean"          name="stopped_by_ipc"/>
+  <field offset="7"   size="1"   type="boolean"          name="broadcast_acceptance"/>
+  <field offset="8"   size="8"   type="ordinal"          name="processor_id"/>
 </struct>
 
 <!-- IPC message encoding from Table 6-1 on page 6-12 -->
@@ -890,9 +890,9 @@
 
 <!-- Figure 4-19 on page 4-31 and Figure 6-20 on page 6-41 -->
 <struct name="port_status" size="16">
-  <field start="0"  size="1"  type="boolean"     name="queue_discipline_priority_and_deadline"/>
-  <field start="1"  size="1"  type="boolean"     name="service_type_delay"/>
-  <field start="2"  size="14"                    name="reserved_2"/>
+  <field offset="0"  size="1"  type="boolean"     name="queue_discipline_priority_and_deadline"/>
+  <field offset="1"  size="1"  type="boolean"     name="service_type_delay"/>
+  <field offset="2"  size="14"                    name="reserved_2"/>
 </struct>
 
 <!-- Table 12-1 on page 12-14 -->
@@ -936,39 +936,39 @@
 <!-- Figure 12-5 on page 12-11 -->
 <!-- Note on page 12-17: testing of system type and testing of descriptor type are not distinguished. -->
 <struct name="fault_code" size="16">
-  <field start="0"  size="4" type="fault_item"        name="memory_fault_item"/>      <!-- so, mo, rr, wr -->
-  <field start="0"  size="5" type="system_type"       name="system_type"/>            <!-- ts -->
-  <field start="0"  size="5" type="fault_object_descriptor_type" name="object_descriptor_type"/> <!-- ts -->
-  <field start="5"  size="2" type="ordinal"           name="rr_low"/>                 <!-- all -->
-  <field start="7"  size="1" type="boolean"           name="memory_write"/>           <!-- so, mo, rr, wr -->
-  <field start="9"  size="2" type="fault_level"       name="fault_level"/>            <!-- not memory, system type, or object descriptor -->
-  <field start="11" size="3" type="memory_fault_code" name="memory_fault_code"/>      <!-- so, mo, rr, wr -->
-  <field start="14" size="2" type="ordinal"           name="rr_high"/>                <!-- all -->
+  <field offset="0"  size="4" type="fault_item"        name="memory_fault_item"/>      <!-- so, mo, rr, wr -->
+  <field offset="0"  size="5" type="system_type"       name="system_type"/>            <!-- ts -->
+  <field offset="0"  size="5" type="fault_object_descriptor_type" name="object_descriptor_type"/> <!-- ts -->
+  <field offset="5"  size="2" type="ordinal"           name="rr_low"/>                 <!-- all -->
+  <field offset="7"  size="1" type="boolean"           name="memory_write"/>           <!-- so, mo, rr, wr -->
+  <field offset="9"  size="2" type="fault_level"       name="fault_level"/>            <!-- not memory, system type, or object descriptor -->
+  <field offset="11" size="3" type="memory_fault_code" name="memory_fault_code"/>      <!-- so, mo, rr, wr -->
+  <field offset="14" size="2" type="ordinal"           name="rr_high"/>                <!-- all -->
 </struct>
 
 <!-- Figure 12-6 on page 12-12 -->
 <struct name="fault_status" size="16">
-  <field start="0"   size="1"   type="boolean"   name="result_destination_memory"/>
-  <field start="1"   size="1"   type="boolean"   name="inexact_result"/>
-  <field start="2"   size="1"   type="boolean"   name="pre_instruction_stack_full"/>
-  <field start="3"   size="1"   type="boolean"   name="post_instruction_stack_full"/>
-  <field start="4"   size="12"                   name="reserved_4"/>
+  <field offset="0"   size="1"   type="boolean"   name="result_destination_memory"/>
+  <field offset="1"   size="1"   type="boolean"   name="inexact_result"/>
+  <field offset="2"   size="1"   type="boolean"   name="pre_instruction_stack_full"/>
+  <field offset="3"   size="1"   type="boolean"   name="post_instruction_stack_full"/>
+  <field offset="4"   size="12"                   name="reserved_4"/>
 </struct>
 
 <!-- Figure 12-4 on page 12-9 -->
 <struct name="fault_information_area" size="320">
-  <field start="0"   size="16"  type="ordinal"        name="fault_object_index"/>
-  <field start="16"  size="16"  type="ordinal"        name="post_instruction_ip"/>
-  <field start="32"  size="16"  type="ordinal"        name="pre_instruction_ip"/>
-  <field start="48"  size="16"  type="ordinal"        name="post_instruction_sp"/>
-  <field start="64"  size="16"  type="ordinal"        name="pre_instruction_sp"/>
-  <field start="80"  size="16"  type="fault_status"   name="fault_status"/>
-  <field start="96"  size="16"  type="ordinal"        name="operator_id"/>
-  <field start="112" size="16"  type="ordinal"        name="fault_code"/>
-  <field start="128" size="16"  type="ordinal"        name="fault_object_selector"/>
-  <field start="144" size="16"  type="ordinal"        name="fault_displacement"/>
-  <field start="160" size="80"  type="ordinal"        name="second_source_operand_or_exceptional_result"/>
-  <field start="240" size="80"  type="ordinal"        name="first_source_operand"/>
+  <field offset="0"   size="16"  type="ordinal"        name="fault_object_index"/>
+  <field offset="16"  size="16"  type="ordinal"        name="post_instruction_ip"/>
+  <field offset="32"  size="16"  type="ordinal"        name="pre_instruction_ip"/>
+  <field offset="48"  size="16"  type="ordinal"        name="post_instruction_sp"/>
+  <field offset="64"  size="16"  type="ordinal"        name="pre_instruction_sp"/>
+  <field offset="80"  size="16"  type="fault_status"   name="fault_status"/>
+  <field offset="96"  size="16"  type="ordinal"        name="operator_id"/>
+  <field offset="112" size="16"  type="ordinal"        name="fault_code"/>
+  <field offset="128" size="16"  type="ordinal"        name="fault_object_selector"/>
+  <field offset="144" size="16"  type="ordinal"        name="fault_displacement"/>
+  <field offset="160" size="80"  type="ordinal"        name="second_source_operand_or_exceptional_result"/>
+  <field offset="240" size="80"  type="ordinal"        name="first_source_operand"/>
 </struct>
 
 <segment base_type="access_segment" system_type="generic" name="generic_access_segment">
@@ -996,8 +996,8 @@
      which may be free_descriptor, storage_descriptor, extended_type_descriptor, refinement_descriptor,
      or interconnect_descriptor -->
 <segment base_type="data_segment" system_type="object_table" name="object_table_data_segment">
-  <field start="0" size="128" type="object_table_header" name="object_table_header"/>
-  <array start="128" name="descriptor_area">
+  <field offset="0" size="128" type="object_table_header" name="object_table_header"/>
+  <array offset="128" name="descriptor_area">
     <field size="128" type="descriptor" name="descriptor"/>
   </array>
 </segment>
@@ -1007,14 +1007,14 @@
   <system_rights index="1" name="may_create_context"/> <!-- Table 3-1 on page 3-24 -->
   <system_rights index="2" name="may_trace"/>
   <system_rights index="3"/>
-  <field start="0"  size="16" type="ordinal"   name="context_access_segment_length"/>  <!-- minus one -->
-  <field start="16" size="16" type="ordinal"   name="context_data_segment_length"/>    <!-- minus one -->
-  <field start="32" size="16" type="ordinal"   name="operand_stack_segment_length"/>   <!-- minus one -->
-  <field start="48" size="16" type="label"     name="initial_instruction_displacement"/>
-  <field start="64" size="16" type="ordinal"   name="data_constants_segment_index"/>
-  <field start="80" size="16" type="ordinal"   name="fault_object_index_in_domain"/>
-  <field start="96" size="16" type="ordinal"   name="trace_object_index_in_domain"/>
-  <field start="112" type="instruction_array"  name="instructions"/>
+  <field offset="0"  size="16" type="ordinal"   name="context_access_segment_length"/>  <!-- minus one -->
+  <field offset="16" size="16" type="ordinal"   name="context_data_segment_length"/>    <!-- minus one -->
+  <field offset="32" size="16" type="ordinal"   name="operand_stack_segment_length"/>   <!-- minus one -->
+  <field offset="48" size="16" type="label"     name="initial_instruction_displacement"/>
+  <field offset="64" size="16" type="ordinal"   name="data_constants_segment_index"/>
+  <field offset="80" size="16" type="ordinal"   name="fault_object_index_in_domain"/>
+  <field offset="96" size="16" type="ordinal"   name="trace_object_index_in_domain"/>
+  <field offset="112" type="instruction_array"  name="instructions"/>
 </segment>
 
 <!-- Figure 3-13 on page 3-28 and Figure 8-2 on page 8-2 -->
@@ -1037,11 +1037,11 @@
 
 <!-- Figure 3-14 on page 3-32 -->
 <segment base_type="data_segment" processor_class="gdp" system_type="context" name="context_data_segment">
-  <field start="0"  size="16" type="context_status"      name="context_status"/>
-  <field start="16" size="16" type="ordinal"             name="stack_pointer"/>
-  <field start="32" size="16" type="ordinal"             name="current_instruction_object_index"/>
-  <field start="48" size="16" type="ordinal"             name="instruction_pointer"/>
-  <field start="64" size="48" type="trace_information"   name="trace_information"/>
+  <field offset="0"  size="16" type="context_status"      name="context_status"/>
+  <field offset="16" size="16" type="ordinal"             name="stack_pointer"/>
+  <field offset="32" size="16" type="ordinal"             name="current_instruction_object_index"/>
+  <field offset="48" size="16" type="ordinal"             name="instruction_pointer"/>
+  <field offset="64" size="48" type="trace_information"   name="trace_information"/>
 </segment>
 
 <!-- Figure 5-4 on page 5-6 -->
@@ -1072,10 +1072,10 @@
   <system_rights index="1"/> <!-- Table 5-2 on page 5-17 -->
   <system_rights index="2"/>
   <system_rights index="3"/>
-  <field start="0"   size="16"  type="object_lock"                 name="object_lock"/>
-  <field start="16"  size="240" type="local_sro_data"              name="local_sro_data"/>
-  <field start="256" size="256" type="process_control_information" name="process_control_information"/>
-  <field start="512" size="320" type="fault_information_area"      name="process_context_fault_information_area"/>
+  <field offset="0"   size="16"  type="object_lock"                 name="object_lock"/>
+  <field offset="16"  size="240" type="local_sro_data"              name="local_sro_data"/>
+  <field offset="256" size="256" type="process_control_information" name="process_control_information"/>
+  <field offset="512" size="320" type="fault_information_area"      name="process_context_fault_information_area"/>
 </segment>
 
 <!-- Figure 6-12 on page 6-27 -->
@@ -1114,22 +1114,22 @@
   <system_rights index="1"/> <!-- Table 6-3 on page 6-35 -->
   <system_rights index="2"/>
   <system_rights index="3"/>
-  <field start="0"   size="16"  type="object_lock"            name="object_lock"/>
-  <field start="16"  size="16"  type="processor_status"       name="processor_status"/>
-  <field start="32"  size="480"                               name="reserved_32"/>
-  <field start="512" size="320" type="fault_information_area" name="fault_information_area"/>
+  <field offset="0"   size="16"  type="object_lock"            name="object_lock"/>
+  <field offset="16"  size="16"  type="processor_status"       name="processor_status"/>
+  <field offset="32"  size="480"                               name="reserved_32"/>
+  <field offset="512" size="320" type="fault_information_area" name="fault_information_area"/>
 </segment>
 
 <!-- Figure 4-18 on page 4-30 and Figure 6-19 on page 6-40 -->
 <segment base_type="data_segment" system_type="port" name="port_data_segment">
-  <field start="0"   size="16" type="object_lock" name="object_lock"/>
-  <field start="16"  size="16" type="port_status" name="port_status"/>
-  <field start="32"  size="16" type="ordinal"     name="head_free_buffer"/>
-  <field start="48"  size="16" type="ordinal"     name="head_message_in_buffer"/>
-  <field start="64"  size="16" type="ordinal"     name="tail_message_in_buffer"/>
-  <field start="80"  size="16" type="ordinal"     name="port_time"/>
-  <field start="96"  size="32"                    name="reserved_96"/>
-  <field start="128" type="port_message_queue_entry_array" name="port_message_queue"/>
+  <field offset="0"   size="16" type="object_lock" name="object_lock"/>
+  <field offset="16"  size="16" type="port_status" name="port_status"/>
+  <field offset="32"  size="16" type="ordinal"     name="head_free_buffer"/>
+  <field offset="48"  size="16" type="ordinal"     name="head_message_in_buffer"/>
+  <field offset="64"  size="16" type="ordinal"     name="tail_message_in_buffer"/>
+  <field offset="80"  size="16" type="ordinal"     name="port_time"/>
+  <field offset="96"  size="32"                    name="reserved_96"/>
+  <field offset="128" type="port_message_queue_entry_array" name="port_message_queue"/>
 </segment>
 
 <!-- Figure 4-17 on page 4-28 and Figure 6-18 on page 6-38 -->
@@ -1146,13 +1146,13 @@
 
 <!-- Figure 4-22 on page 4-37 and Figure 6-23 on page 6-47 -->
 <segment base_type="data_segment" system_type="carrier" name="carrier_data_segment">
-  <field start="0"   size="16" type="object_lock"         name="object_lock"/>
-  <field start="16"  size="16" type="carrier_status"      name="carrier_status"/>
-  <field start="32"  size="1"  type="boolean"             name="maintenance_request"/>
-  <field start="33"  size="15"                            name="reserved_33"/> <!-- or is it preserved? -->
-  <field start="48"  size="16"                            name="reserved_48"/>
-  <field start="64"  size="32" type="queuing_value"       name="blocked_queuing_value"/>
-  <field start="96"  size="32" type="queuing_value"       name="second_port_queuing_value"/>
+  <field offset="0"   size="16" type="object_lock"         name="object_lock"/>
+  <field offset="16"  size="16" type="carrier_status"      name="carrier_status"/>
+  <field offset="32"  size="1"  type="boolean"             name="maintenance_request"/>
+  <field offset="33"  size="15"                            name="reserved_33"/> <!-- or is it preserved? -->
+  <field offset="48"  size="16"                            name="reserved_48"/>
+  <field offset="64"  size="32" type="queuing_value"       name="blocked_queuing_value"/>
+  <field offset="96"  size="32" type="queuing_value"       name="second_port_queuing_value"/>
 </segment>
 
 <!-- Figure 4-21 on page 4-34 and Figure 6-22 on page 6-44 -->
@@ -1176,14 +1176,14 @@
   <system_rights index="1"/> <!-- Table 2-3 on page 2-36 -->
   <system_rights index="2"/>
   <system_rights index="3"/>
-  <field start="0"   size="16"                    name="preserved_0"/>
-  <field start="16"  size="4"                     name="reserved_4"/>
-  <field start="20"  size="12" type="ordinal"     name="beginning_block_index"/>
-  <field start="32"  size="4"                     name="reserved_32"/>
-  <field start="36"  size="12" type="ordinal"     name="current_block_index"/>
-  <field start="48"  size="16" type="object_lock" name="object_lock"/>
-  <field start="64"  size="64"                    name="preserved_64"/>
-  <field start="128" type="storage_block_descriptor_array" name="storage_block_descriptor_area"/>
+  <field offset="0"   size="16"                    name="preserved_0"/>
+  <field offset="16"  size="4"                     name="reserved_4"/>
+  <field offset="20"  size="12" type="ordinal"     name="beginning_block_index"/>
+  <field offset="32"  size="4"                     name="reserved_32"/>
+  <field offset="36"  size="12" type="ordinal"     name="current_block_index"/>
+  <field offset="48"  size="16" type="object_lock" name="object_lock"/>
+  <field offset="64"  size="64"                    name="preserved_64"/>
+  <field offset="128" type="storage_block_descriptor_array" name="storage_block_descriptor_area"/>
 </segment>
 
 <!-- Figure 2-13 on page 2-32, Table 2-2 on page 2-33 -->
@@ -1204,11 +1204,11 @@
 
 <!-- Figure 6-16 on page 6-36 and Figure 6-17 on page 6-37 -->
 <segment base_type="data_segment" system_type="communication" name="communication_data_segment">
-  <field start="0"   size="16" type="object_lock"  name="object_lock"/>
-  <field start="16"  size="16" type="ipc_message"  name="ipc_message"/>
-  <field start="32"  size="16" type="ordinal"      name="response_count"/>
-  <field start="48"  size="16" type="ordinal"      name="processor_count"/>  <!-- must be 1 for local -->
-  <field start="64"  size="16" type="ordinal"      name="processor_id"/>     <!-- 8 msb 0; all 0 for global -->
+  <field offset="0"   size="16" type="object_lock"  name="object_lock"/>
+  <field offset="16"  size="16" type="ipc_message"  name="ipc_message"/>
+  <field offset="32"  size="16" type="ordinal"      name="response_count"/>
+  <field offset="48"  size="16" type="ordinal"      name="processor_count"/>  <!-- must be 1 for local -->
+  <field offset="64"  size="16" type="ordinal"      name="processor_id"/>     <!-- 8 msb 0; all 0 for global -->
 </segment>
 
 <!-- Figure 7-19 on page 7-51 -->
@@ -1216,32 +1216,32 @@
   <system_rights index="1" name="may_create_system_object"/> <!-- Table 7-2 on page 7-53 -->
   <system_rights index="2" name="may_amplify_rights"/>
   <system_rights index="3"/>
-  <field start="0"   size="1"  type="boolean"         name="type_testing_control"/>
-  <field start="1"   size="1"  type="boolean"         name="system_rights_1"/>
-  <field start="2"   size="1"  type="boolean"         name="system_rights_2"/>
-  <field start="3"   size="1"  type="boolean"         name="system_rights_3"/>
-  <field start="4"   size="12"                        name="preserved_4"/>
-  <field start="16"  size="1"  type="boolean"         name="delete_rights"/>
-  <field start="17"  size="1"  type="boolean"         name="heap_flag"/>
-  <field start="18"  size="1"  type="boolean"         name="read_rights"/>
-  <field start="19"  size="1"  type="boolean"         name="write_rights"/>
-  <field start="20"  size="3"                         name="preserved_20"/>
-  <field start="23"  size="1"  type="base_type"       name="base_type"/>
-  <field start="24"  size="5"  type="system_type"     name="system_type"/>
-  <field start="29"  size="3"  type="processor_class" name="processor_class"/>
+  <field offset="0"   size="1"  type="boolean"         name="type_testing_control"/>
+  <field offset="1"   size="1"  type="boolean"         name="system_rights_1"/>
+  <field offset="2"   size="1"  type="boolean"         name="system_rights_2"/>
+  <field offset="3"   size="1"  type="boolean"         name="system_rights_3"/>
+  <field offset="4"   size="12"                        name="preserved_4"/>
+  <field offset="16"  size="1"  type="boolean"         name="delete_rights"/>
+  <field offset="17"  size="1"  type="boolean"         name="heap_flag"/>
+  <field offset="18"  size="1"  type="boolean"         name="read_rights"/>
+  <field offset="19"  size="1"  type="boolean"         name="write_rights"/>
+  <field offset="20"  size="3"                         name="preserved_20"/>
+  <field offset="23"  size="1"  type="base_type"       name="base_type"/>
+  <field offset="24"  size="5"  type="system_type"     name="system_type"/>
+  <field offset="29"  size="3"  type="processor_class" name="processor_class"/>
 </segment>
 
 <!-- Figure 7-20 on page 7-54 -->
 <segment base_type="data_segment" system_type="refinement_control" name="refinement_control_data_segment">
-  <field start="0"   size="1"  type="boolean"         name="system_rights_removal"/>
-  <field start="1"   size="6"                         name="preserved_1"/>
-  <field start="7"   size="1"  type="base_type"       name="destination_base_type"/>
-  <field start="8"   size="5"  type="system_type"     name="destination_system_type"/>
-  <field start="13"  size="3"  type="processor_class" name="destination_processor_class"/>
-  <field start="16"  size="7"                         name="preserved_16"/>
-  <field start="23"  size="1"  type="base_type"       name="source_base_type"/>
-  <field start="24"  size="5"  type="system_type"     name="source_system_type"/>
-  <field start="29"  size="3"  type="processor_class" name="source_processor_class"/>
+  <field offset="0"   size="1"  type="boolean"         name="system_rights_removal"/>
+  <field offset="1"   size="6"                         name="preserved_1"/>
+  <field offset="7"   size="1"  type="base_type"       name="destination_base_type"/>
+  <field offset="8"   size="5"  type="system_type"     name="destination_system_type"/>
+  <field offset="13"  size="3"  type="processor_class" name="destination_processor_class"/>
+  <field offset="16"  size="7"                         name="preserved_16"/>
+  <field offset="23"  size="1"  type="base_type"       name="source_base_type"/>
+  <field offset="24"  size="5"  type="system_type"     name="source_system_type"/>
+  <field offset="29"  size="3"  type="processor_class" name="source_processor_class"/>
 </segment>
 
 </definitions>
