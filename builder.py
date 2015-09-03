@@ -44,6 +44,9 @@ class Allocation(object):
         #print "returning pos", pos
         return pos
 
+    def allocate_bits(self, size, pos=0, fixed=False, dry_run=False):
+        
+
     #def find_space(self, size=1, pos=0, fixed=False):
     #    return self.allocate(size=size, pos=pos, fixed=fixed, dry_run=True)
 
@@ -71,8 +74,8 @@ class Field(object):
         # if field_tree is not None:
         #    self.name = field_tree.get('name')
         self.allocated = False
-        self.size = None
-        self.offset = None
+        self.size = None     # in bits
+        self.offset = None   # in bits from start of segment
         self.non_byte = False
         self.skip = False
 
@@ -90,17 +93,19 @@ class Field(object):
             print self
         assert self.size is not None
         if self.offset is None:
-            self.offset = self.segment.allocation.allocate_bytes(size = self.size)
+            #print "segment", self.segment.name, "allocating size", self.size
+            self.offset = 8 * self.segment.allocation.allocate_bytes(size = self.size / 8)
         else:
-            self.segment.allocation.allocate_bytes(size = self.size,
-                                                   pos = self.offset,
+            #print "segment", self.segment.name, "allocating size", self.size, "at offset", self.offset
+            self.segment.allocation.allocate_bytes(size = self.size / 8,
+                                                   pos = self.offset / 8,
                                                    fixed = True)
         self.allocated = True
 
     def compute_size(self):
         if self.size is None:
             # XXX hack:
-            self.size = 4
+            self.size = 32
         return self.size
 
     def write_value(self):
@@ -120,7 +125,7 @@ class AD(Field):
 
     def _parse_index(self, k, v):
         try:
-            offset = 4 * int(v, 0)
+            offset = 32 * int(v, 0)
         except ValueError:
             s = self.arch.symbols[self.segment.segment_type]
             assert s.type == 'segment'
@@ -150,7 +155,7 @@ class AD(Field):
         d = { 'name': self._parse_name,
               'index': self._parse_index,
               'segment': self._parse_segment }
-        self.size = 4
+        self.size = 32
         self.segment_name = None
         self.dir_index = None
         self.seg_index = None
@@ -172,7 +177,7 @@ class AD(Field):
         # should verify it!
 
     def compute_size(self):
-        self.size = 4
+        self.size = 32
         return self.size
 
     def write_value(self):
@@ -243,21 +248,21 @@ class DataField(Field):
             assert self.name in s.value.field_by_name
             f = s.value.field_by_name[self.name]
 
-            if f.start is None or f.size is None:
+            if f.offset is None or f.size is None:
                 self.skip = True
                 return
 
-            if (f.start % 8 != 0) or (f.size % 8 != 0):
+            if (f.offset % 8 != 0) or (f.size % 8 != 0):
                 # XXX non-byte-boundary field, can't yet handle
-                #print "start of field", self.name, "is", f.start
+                #print "offset of field", self.name, "is", f.offset
                 #print "size of field", self.name, "is", f.size
                 self.non_byte = True
                 self.skip = True
                 return
 
             self.type = f.type
-            self.offset = f.start / 8
-            self.size = f.size / 8
+            self.offset = f.offset
+            self.size = f.size
             if self.type == 'ordinal':
                 self.numeric = True
         else:
@@ -287,7 +292,7 @@ class DataField(Field):
             return # XXX
         if not self.numeric:
             return # XXX
-        bytes = [(self.value >> (8*i)) & 0xff for i in range(self.size)]
+        bytes = [(self.value >> (8*i)) & 0xff for i in range(self.size/8)]
         self.segment.write_byte_to_image(self.offset, bytes)
 
 
@@ -344,7 +349,7 @@ class ObjectTableEntry(Field):
     def __init__(self, segment, offset = None):
         #print "creating OTE, offset", offset
         super(ObjectTableEntry, self).__init__(segment, None)
-        self.size = 16
+        self.size = 128
         self.descriptor = [0, 0, 0, 0]
         if offset is not None:
             #print "known offset, allocating"
@@ -396,7 +401,7 @@ class StorageDescriptor(ObjectTableEntry):
     def __init__(self, segment, obj, index):
         super(StorageDescriptor, self).__init__(segment)
         self.obj = obj
-        self.offset = index * 16
+        self.offset = index * 128
         self.level_number = 0 # XXX global
 
     def write_value(self):
@@ -468,6 +473,7 @@ class Object(object):
 
     def _alloc_ote(self):
         if self.ote is None:
+            #print "allocating ote for segment", self.name
             if self.dir_index == 2 and self.seg_index == 2:
                 seg_table = self
             else:
@@ -477,7 +483,7 @@ class Object(object):
                                                                      dry_run=True) / 16
             self.ote = self.create_object_descriptor(seg_table)
             self.ote.allocate()
-            assert self.seg_index == self.ote.offset / 16
+            assert self.seg_index == self.ote.offset / 128
             self.image.object_by_coord[(self.dir_index, self.seg_index)] = self
             seg_table.fields.append(self.ote)
         else:
@@ -575,6 +581,7 @@ class Segment(Object):
         segment_type = tree.get('type')
         assert segment_type in image.arch.symbols
         st = image.arch.symbols[segment_type]
+        assert st.type == 'segment'
         return d[st.value.base_type].parse(image, tree)
 
     def __init__(self, image, segment_tree):
@@ -602,6 +609,22 @@ class Segment(Object):
         self.fields = []
         for field_tree in segment_tree:
             self.fields.append(Field.parse(self, field_tree))
+        # XXX for system segments, need to include the fields that are
+        #     defined for the system segment, but may not be present in
+        #     the image definition.
+        #print "segment %s type" % self.name, self.segment_type
+        #print "st", st.value
+        for arch_field in st.value.fields:
+            if arch_field.size is None:
+                #print "arch field %s offset %d size unk." % (arch_field.name, arch_field.offset)
+                pass
+            elif arch_field.offset is None:
+                print "arch field %s offset unk." % (arch_field.name)
+                pass
+            else:   
+                if arch_field.offset, arch_field.size
+                print "arch field %s offset %d size %d" % (arch_field.name, arch_field.offset, arch_field.size)
+                pass
 
     def abs_min_size(self):
         # don't allow a zero length data segment, round up to 1 byte
@@ -655,7 +678,9 @@ class Segment(Object):
         assert self.phys_addr is not None
         pa = self.phys_addr + offset
         try:
-            assert offset + len(data) <= self.size
+            if offset + 8 * len(data) > (self.size * 8):
+                print "offset %d, size %d, byte count %d" % (offset, self.size, len(data))
+            assert offset + 8 * len(data) <= (self.size * 8)
             self.image.phys_mem[pa:pa + len(data)] = data
         except TypeError:
             self.image.phys_mem[pa] = data
@@ -664,7 +689,7 @@ class Segment(Object):
     def write_u32_to_image(self, offset, data):
         try:
             for i in range(len(data)):
-                self.write_u32_to_image(offset + 4*i, data[i])
+                self.write_u32_to_image(offset + 32*i, data[i])
         except TypeError:
             self.write_byte_to_image(offset,
                                      [(data >> (8*j)) & 0xff for j in range(4)])
@@ -680,8 +705,8 @@ class Segment(Object):
                     1)  # valid
         
         # write segment prefix at self.phys_addr - 8
-        self.write_u32_to_image(-8, ad_image)
-        self.write_u32_to_image(-4, 0)
+        self.write_u32_to_image(-64, ad_image)
+        self.write_u32_to_image(-32, 0)
 
         for field in self.fields:
             field.write_value()
