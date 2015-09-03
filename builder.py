@@ -59,8 +59,9 @@ class Field(object):
     # a factory method
     @staticmethod
     def parse(segment, field_tree):
-        d = { 'ad': AD,
-              'field' : DataField }
+        d = { 'ad':    AD,
+              'field': DataField,
+              'code':  Code }
         return d[field_tree.tag](segment, field_tree)
 
     def __init__(self, segment, field_tree):
@@ -77,6 +78,8 @@ class Field(object):
 
     def allocate(self):
         if self.allocated:
+            return
+        if self.size == 0:
             return
         if self.skip:
             return # XXX
@@ -101,7 +104,8 @@ class Field(object):
         return self.size
 
     def write_value(self):
-        assert False
+        assert self.size == 0
+
 
 class AD(Field):
     _bool_dict = { 'true': True,
@@ -200,7 +204,7 @@ class AD(Field):
 class DataField(Field):
     def _parse_name(self, k, v):
         # XXX doesn't do anything yet, but eventually allow
-        #     ad-hoc definition of a name for an AD slot in an object
+        #     ad-hoc definition of a name for a data field in an object
         self.name = v
 
     def _parse_value(self, k, v):
@@ -285,6 +289,56 @@ class DataField(Field):
             return # XXX
         bytes = [(self.value >> (8*i)) & 0xff for i in range(self.size)]
         self.segment.write_byte_to_image(self.offset, bytes)
+
+
+class CodeItem(object):
+    @staticmethod
+    def parse(field, item_tree):
+        d = { 'label':       Label,
+              'assume':      Assume, 
+              'instruction': Instruction }
+        return d[item_tree.tag](field, item_tree)
+
+class Label(CodeItem):
+    def _parse_name(self, k, v):
+        self.name = v
+
+    def _parse_other(self, k, v):
+        print "unrecognized label attribute", k
+
+    def __init__(self, field, item_tree):
+        self.name = None
+        d = { 'name': self._parse_name }
+        for k, v in item_tree.attrib.iteritems():
+            d.get(k, Label._parse_other)(k, v)
+        assert self.name is not None
+        assert self.name not in field.segment.labels
+        field.segment.labels[self.name] = field.segment.ip
+
+class Assume(CodeItem):
+    def __init__(self, field, item_tree):
+        self.eas_index = int(item_tree.get('eas'))
+        assert 0 <= self.eas_index <= 3
+        self.seg_name = item_tree.get('segment')
+        field.segment.eas[self.eas_index] = self.seg_name
+
+class Instruction(CodeItem):
+    def __init__(self, field, item_tree):
+        pass
+
+
+class Code(Field):
+    def __init__(self, segment, field_tree):
+        super(Code, self).__init__(segment, field_tree)
+        assert segment.base_type == 0
+        assert segment.__class__ == InstructionSegment
+        self.size = 0 # each instruction will be allocated as it is parsed
+        self.items = []
+        d = { 'label':       Label,
+              'assume':      Assume, 
+              'instruction': Instruction }
+        for item in field_tree:
+            self.items.append(CodeItem.parse(self, item))
 
 class ObjectTableEntry(Field):
     def __init__(self, segment, offset = None):
@@ -652,11 +706,13 @@ class DataSegment(Segment):
     # a factory method
     @staticmethod
     def parse(image, tree):
+        d = { 2: SegmentTable,
+              3: InstructionSegment }
         segment_type = tree.get('type')
         assert segment_type in image.arch.symbols
-        st = image.arch.symbols[segment_type]
-        if st.value.system_type == 2:  # XXX should get enum value
-            return SegmentTable.parse(image, tree)
+        st = image.arch.symbols[segment_type].value.system_type
+        if st in d:
+            return d[st].parse(image, tree)
         else:
             return DataSegment(image, tree)
 
@@ -676,6 +732,8 @@ class SegmentTable(DataSegment):
 
     def __init__(self, image, segment_tree):
         super(SegmentTable, self).__init__(image, segment_tree)
+        assert len(segment_tree) == 0   # can't have any data fields
+        assert self.dir_index is None or self.dir_index is 2
         self._set_dir_index(2)
 
         self.min_free_descriptors = int(segment_tree.get('reserve', '0'))
@@ -714,11 +772,17 @@ class SegmentTableDirectory(SegmentTable):
         else:
             assert self.phys_addr == 8
 
-class InstructionSegment(Segment):
-    # XXX not yet any way to instantiate this
+class InstructionSegment(DataSegment):
+    # a factory method
+    @staticmethod
+    def parse(image, tree):
+        return InstructionSegment(image, tree)
+
     def __init__(self, image, segment_tree):
+        self.labels = { }
+        self.eas = [ None, None, None, None ]
+        self.ip = 112  # XXX should get from definitions
         super(InstructionSegment, self).__init__(image, segment_tree)
-    
 
 
 class Refinement(Object):
@@ -847,6 +911,9 @@ if __name__ == '__main__':
 
     print "assigning coordinates of objects"
     image.assign_coordinates()
+
+    # XXX need a pass after assigning coordinates parse contents of data
+    # segments, so that intersegment references can be resolved
 
     print "computing sizes of segments"
     image.compute_segment_sizes()
