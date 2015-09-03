@@ -330,12 +330,12 @@
     <field name="operand_stack_segment_length" value="32"/>
     <field name="initial_instruction_displacement" value="start"/>
     <field name="data_constants_segment_index" value="1"/>
-    <field name="instructions">
+    <code>
       <label name="start"/>
       <instruction op="branch" format="">
-	<bref>start</bref>
+	<bref target="start"/>
       </instruction>
-    </field>
+    </code>
   </segment>
 
   <segment name="null_program_domain_access_segment" type="domain_access_segment" object_table="null_program_object_table">
@@ -348,102 +348,106 @@
     <field name="operand_stack_segment_length" value="32"/>
     <field name="initial_instruction_displacement" value="init"/>
     <field name="data_constants_segment_index" value="1"/>
-    <field name="instructions">
+    <code>
       <label name="init"/>
 
+      <assume eas="0" segment="process_1_root_context_data_segment"/>
+
+      <!-- XXX need an instruction to enter the process_1_root_constants_data_segment as eas 1 -->
+      <assume eas="1" segment="process_1_root_constants_data_segment"/>
+
       <instruction op="move_character" format="ref1,stk">
-	<dref>first</dref>
-	<dref>uart_reset_byte</dref>
+	<dref segment="process_1_root_constants_data_segment" offset="first"/>
+	<dref segment="process_1_root_constants_data_segment" offset="uart_reset_byte"/>
       </instruction>
 
       <instruction op="convert_character_to_short_ordinal" format="ref1,stk">
-	<dref>c</dref>
+	<dref segment="process_1_root_context_data_segment" offset="c"/>
       </instruction>
 
       <instruction op="move_to_interconnect" format="ref1,ref2,stk">
-	<dref>uart_object_selector</dref>
-	<dref>uart_data_register_displacement</dref>
+	<dref segment="process_1_root_constants_data_segment" offset="uart_object_selector"/>
+	<dref segment="process_1_root_constants_data_segment" offset="uart_data_register_displacement"/>
       </instruction>
 
       <instruction op="move_character" format="ref1,stk">
-	<dref>first</dref>
-	<dref>uart_mode_byte</dref>
+	<dref segment="process_1_root_constants_data_segment" offset="first"/>
+	<dref segment="process_1_root_constants_data_segment" offset="uart_mode_byte"/>
       </instruction>
 
       <instruction op="convert_character_to_short_ordinal" format="ref1,stk">
-	<dref>c</dref>
+	<dref segment="process_1_root_context_data_segment" offset="c"/>
       </instruction>
 
       <instruction op="move_to_interconnect" format="ref1,ref2,stk">
-	<dref>uart_object_selector</dref>
-	<dref>uart_data_register_displacement</dref>
+	<dref segment="process_1_root_constants_data_segment" offset="uart_object_selector"/>
+	<dref segment="process_1_root_constants_data_segment" offset="uart_data_register_displacement"/>
       </instruction>
 
       <instruction op="move_character" format="ref1,stk">
-	<dref>first</dref>
-	<dref>uart_command_byte</dref>
+	<dref segment="process_1_root_constants_data_segment" offset="first"/>
+	<dref segment="process_1_root_constants_data_segment" offset="uart_command_byte"/>
       </instruction>
 
       <instruction op="convert_character_to_short_ordinal" format="ref1,stk">
-	<dref>c</dref>
+	<dref segment="process_1_root_context_data_segment" offset="c"/>
       </instruction>
 
       <instruction op="move_to_interconnect" format="ref1,ref2,stk">
-	<dref>uart_object_selector</dref>
-	<dref>uart_data_register_displacement</dref>
+	<dref segment="process_1_root_constants_data_segment" offset="uart_object_selector"/>
+	<dref segment="process_1_root_constants_data_segment" offset="uart_data_register_displacement"/>
       </instruction>
 
       <label name="start"/>
 
       <instruction op="move_character" format="ref1,ref2">
-	<dref>first</dref>
-	<dref>c</dref>
+	<dref segment="process_1_root_constants_data_segment" offset="first"/>
+	<dref segment="process_1_root_context_data_segment" offset="c"/>
       </instruction>
 
       <label name="loop"/>
 
       <instruction op="move_from_interconnect" format="ref1,ref2,stk">
-	<dref>uart_object_selector</dref>
-	<dref>uart_control_status_register_displacement</dref>
+	<dref segment="process_1_root_constants_data_segment" offset="uart_object_selector"/>
+	<dref segment="process_1_root_constants_data_segment" offset="uart_control_status_register_displacement"/>
       </instruction>
 
-      <instruction op="convert_short_ordinal_to_character" format="stk,stk">
-      </instruction>
+      <instruction op="convert_short_ordinal_to_character" format="stk,stk"/>
 
       <instruction op="and_character" format="stk,ref1,stk">
-	<dref>uart_tx_ready_mask</dref>
+	<dref segment="process_1_root_constants_data_segment" offset="uart_tx_ready_mask"/>
       </instruction>
 
       <instruction op="branch_false" format="br">
-	<bref>loop</bref>
+	<bref target="loop"/>
       </instruction>
 
       <instruction op="convert_character_to_short_ordinal" format="ref1,stk">
-	<dref>c</dref>
+	<dref segment="process_1_root_context_data_segment" offset="c"/>
       </instruction>
 
       <instruction op="move_to_interconnect" format="ref1,ref2,stk">
-	<dref>uart_object_selector</dref>
-	<dref>uart_data_register_displacement</dref>
+	<dref segment="process_1_root_constants_data_segment" offset="uart_object_selector"/>
+	<dref segment="process_1_root_constants_data_segment" offset="uart_data_register_displacement"/>
       </instruction>
 
       <instruction op="increment_character" format="ref1">
-	<dref>c</dref>
+	<dref segment="process_1_root_context_data_segment" offset="c"/>
       </instruction>
 
       <instruction op="greater_than_character_character" format="ref1,ref2,stk">
-	<dref>c</dref>
-	<dref>last</dref>
+	<dref segment="process_1_root_context_data_segment" offset="c"/>
+	<dref segment="process_1_root_constants_data_segment" offset="last"/>
       </instruction>
 
       <instruction op="branch_false" format="stk,br">
-	<bref>loop</bref>
+	<bref target="loop"/>
       </instruction>
 
       <instruction op="branch" format="br">
-	<bref>start</bref>
+	<bref target="start"/>
       </instruction>
-    </field>
+    </code>
   </segment>
 
   <segment name="program_1_root_fault_instruction_data_segment" type="instruction_data_segment" object_table="program_1_object_table">
@@ -452,14 +456,14 @@
     <field name="operand_stack_segment_length" value="32"/>
     <field name="initial_instruction_displacement" value="init"/>
     <field name="data_constants_segment_index" value="1"/>
-    <field name="instructions">
+    <code>
       <label name="init"/>
       <!-- No actual fault handling. Loop doing nothing, to preserve state
            for post-mortem analysis. -->
       <instruction op="branch" format="br">
-	<bref>init</bref>
+	<bref target="init"/>
       </instruction>
-    </field>
+    </code>
   </segment>
 
   <segment name="program_1_root_domain_access_segment" type="domain_access_segment" object_table="program_1_object_table">
