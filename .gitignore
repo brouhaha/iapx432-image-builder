@@ -1,0 +1,6 @@
+*~
+*.pyc
+*.bin
+*.[ch]
+*.tar.gz
+RCS
