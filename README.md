@@ -60,7 +60,7 @@ The iapx432-image-builder is invoked from the command line,
 providing arguments for the image description XML input file,
 and the binary image output file:
 
-* `iapx432-image-builder image.xml image.bin`
+* `builder image.xml image.bin`
 
 ## License information for Python source files
 
