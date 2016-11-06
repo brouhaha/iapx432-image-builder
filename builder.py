@@ -1,6 +1,5 @@
-#!/usr/bin/python2
-
-# Copyright 2014, 2015 Eric Smith <spacewar@gmail.com>
+#!/usr/bin/python3
+# Copyright 2014, 2015, 2016 Eric Smith <spacewar@gmail.com>
 
 import argparse
 import pprint
@@ -20,6 +19,7 @@ class Allocation(object):
     
     def __init__(self, size, name = None):
         self.name = name
+        self.size = size
         self._v = bytearray(size)
         self._z = bytearray(size)  # in Python 3, this could be a bytes object
         self._ff = bytearray([0xff])
@@ -28,24 +28,21 @@ class Allocation(object):
         return ' '.join(["%d" % b for b in self._v])
 
     def allocate_bytes(self, size=1, pos=0, fixed=False, dry_run=False):
-        #print "allocating from:", self.name, "size:", size, "pos:", pos, "fixed:", fixed, "dry_run:", dry_run
+        #print("allocating from:", self.name, "size:", size, "pos:", pos, "fixed:", fixed, "dry_run:", dry_run)
         if not fixed:
             pos = self._v.find(self._z[:size], pos)
             if pos < 0:
                 raise self.AllocationError()
-            if max is not None and pos + size > max:
+            if pos + size > self.size:
                 raise self.AllocationError()
         if self._v[pos:pos+size] != self._z[:size]:
-            #print "pos:", pos, "size:", size
-            #print [int(x) for x in self._v[pos:pos+size]]
+            #print("pos:", pos, "size:", size)
+            #print([int(x) for x in self._v[pos:pos+size]])
             raise self.AllocationError()
         if not dry_run:
             self._v[pos:pos+size] = [0xff] * size
-        #print "returning pos", pos
+        #print("returning pos", pos)
         return pos
-
-    def allocate_bits(self, size, pos=0, fixed=False, dry_run=False):
-        
 
     #def find_space(self, size=1, pos=0, fixed=False):
     #    return self.allocate(size=size, pos=pos, fixed=fixed, dry_run=True)
@@ -89,16 +86,16 @@ class Field(object):
         if self.non_byte:
             return # XXX
         if self.size is None:
-            print "size of field at offset", self.offset, "of", self.name, "unknown"
-            print self
+            print("size of field at offset", self.offset, "of", self.name, "unknown")
+            print(self)
         assert self.size is not None
         if self.offset is None:
-            #print "segment", self.segment.name, "allocating size", self.size
-            self.offset = 8 * self.segment.allocation.allocate_bytes(size = self.size / 8)
+            #print("segment", self.segment.name, "allocating size", self.size)
+            self.offset = 8 * self.segment.allocation.allocate_bytes(size = self.size // 8)
         else:
-            #print "segment", self.segment.name, "allocating size", self.size, "at offset", self.offset
-            self.segment.allocation.allocate_bytes(size = self.size / 8,
-                                                   pos = self.offset / 8,
+            #print("segment", self.segment.name, "allocating size", self.size, "at offset", self.offset)
+            self.segment.allocation.allocate_bytes(size = self.size // 8,
+                                                   pos = self.offset // 8,
                                                    fixed = True)
         self.allocated = True
 
@@ -146,7 +143,7 @@ class AD(Field):
         else:
             # XXX handle system rights, based on segment type of target segment
             # XXX How? we don't know the type of the target segment!
-            print "unrecognized attribute", k
+            print("unrecognized attribute", k)
 
     def __init__(self, segment, ad_tree):
         super(AD, self).__init__(segment, ad_tree)
@@ -167,7 +164,7 @@ class AD(Field):
                         'sys2'  : False,
                         'sys3'  : False }
 
-        for k, v in ad_tree.attrib.iteritems():
+        for k, v in ad_tree.attrib.items():
             d.get(k, self._parse_other)(k, v)
 
         if not hasattr(self, 'valid'):
@@ -184,7 +181,7 @@ class AD(Field):
         ad = 0
         if self.valid:
             if self.segment_name not in self.image.object_by_name:
-                print "can't find segment", self.segment_name
+                print("can't find segment", self.segment_name)
             assert self.segment_name in self.image.object_by_name
             obj = self.image.object_by_name[self.segment_name]
             if self.dir_index is None:
@@ -222,7 +219,7 @@ class DataField(Field):
         self.type = v
         
     def _parse_other(self, k, v):
-        print "unrecognized atribute", k
+        print("unrecognized atribute", k)
         
     def __init__(self, segment, field_tree):
         super(DataField, self).__init__(segment, field_tree)
@@ -234,7 +231,7 @@ class DataField(Field):
         d = { 'name':  self._parse_name,
               'value': self._parse_value,
               'type':  self._parse_type}
-        for k, v in field_tree.attrib.iteritems():
+        for k, v in field_tree.attrib.items():
             d.get(k, self._parse_other)(k, v)
 
         assert self.name is not None
@@ -243,8 +240,8 @@ class DataField(Field):
             s = self.arch.symbols[self.segment.segment_type]
             assert s.type == 'segment'
             if self.name not in s.value.field_by_name:
-                print "field name:", self.name
-                print "known fields:", s.value.field_by_name
+                print("field name:", self.name)
+                print("known fields:", s.value.field_by_name)
             assert self.name in s.value.field_by_name
             f = s.value.field_by_name[self.name]
 
@@ -254,8 +251,8 @@ class DataField(Field):
 
             if (f.offset % 8 != 0) or (f.size % 8 != 0):
                 # XXX non-byte-boundary field, can't yet handle
-                #print "offset of field", self.name, "is", f.offset
-                #print "size of field", self.name, "is", f.size
+                #print("offset of field", self.name, "is", f.offset)
+                #print("size of field", self.name, "is", f.size)
                 self.non_byte = True
                 self.skip = True
                 return
@@ -292,7 +289,7 @@ class DataField(Field):
             return # XXX
         if not self.numeric:
             return # XXX
-        bytes = [(self.value >> (8*i)) & 0xff for i in range(self.size/8)]
+        bytes = [(self.value >> (8*i)) & 0xff for i in range(self.size//8)]
         self.segment.write_byte_to_image(self.offset, bytes)
 
 
@@ -309,12 +306,12 @@ class Label(CodeItem):
         self.name = v
 
     def _parse_other(self, k, v):
-        print "unrecognized label attribute", k
+        print("unrecognized label attribute", k)
 
     def __init__(self, field, item_tree):
         self.name = None
         d = { 'name': self._parse_name }
-        for k, v in item_tree.attrib.iteritems():
+        for k, v in item_tree.attrib.items():
             d.get(k, Label._parse_other)(k, v)
         assert self.name is not None
         assert self.name not in field.segment.labels
@@ -347,12 +344,12 @@ class Code(Field):
 
 class ObjectTableEntry(Field):
     def __init__(self, segment, offset = None):
-        #print "creating OTE, offset", offset
+        #print("creating OTE, offset", offset)
         super(ObjectTableEntry, self).__init__(segment, None)
         self.size = 128
         self.descriptor = [0, 0, 0, 0]
         if offset is not None:
-            #print "known offset, allocating"
+            #print("known offset, allocating")
             self.offset = offset
             self.allocate()
 
@@ -362,7 +359,7 @@ class ObjectTableEntry(Field):
 
 class ObjectTableHeader(ObjectTableEntry):
     def __init__(self, segment):
-        #print "Creating ObjectTableHeader"
+        #print("Creating ObjectTableHeader")
         super(ObjectTableHeader, self).__init__(segment, offset = 0)
         self.free_index = 0
         self.end_index = 0
@@ -460,7 +457,7 @@ class Object(object):
         if isinstance(self, SegmentTable) and self.object_table is None:
             self.object_table = image.segment_table_directory.name
             
-        #print "name", self.name, "object table", self.object_table
+        #print("name", self.name, "object table", self.object_table)
 
         if 'dir_index' in tree.attrib:
             self._set_dir_index(int(tree.get('dir_index')))
@@ -473,17 +470,17 @@ class Object(object):
 
     def _alloc_ote(self):
         if self.ote is None:
-            #print "allocating ote for segment", self.name
+            #print("allocating ote for segment", self.name)
             if self.dir_index == 2 and self.seg_index == 2:
                 seg_table = self
             else:
                 seg_table = self.image.object_by_coord[(2, self.dir_index)]
             if self.seg_index is None:
                 self.seg_index = seg_table.allocation.allocate_bytes(size=16,
-                                                                     dry_run=True) / 16
+                                                                     dry_run=True) // 16
             self.ote = self.create_object_descriptor(seg_table)
             self.ote.allocate()
-            assert self.seg_index == self.ote.offset / 128
+            assert self.seg_index == self.ote.offset // 128
             self.image.object_by_coord[(self.dir_index, self.seg_index)] = self
             seg_table.fields.append(self.ote)
         else:
@@ -495,9 +492,9 @@ class Object(object):
                 pass
 
     def _mark_coord(self):
-        #print "mark_coord for", self.name, "(%d, %d)" % (self.dir_index, self.seg_index)
+        #print("mark_coord for", self.name, "(%d, %d)" % (self.dir_index, self.seg_index))
         coord = (self.dir_index, self.seg_index)
-        #print "descr", self.name, "assigned", coord
+        #print("descr", self.name, "assigned", coord)
         assert coord not in self.image.object_by_coord
         self._alloc_ote()
 
@@ -528,33 +525,33 @@ class Object(object):
             self.seg_index is not None):
             
             # XXX verify that object table matches coordinates
-            #print "segment %s coordinates already assigned: (%d, %d)" % (self.name, self.dir_index, self.seg_index)
+            #print("segment %s coordinates already assigned: (%d, %d)" % (self.name, self.dir_index, self.seg_index))
             return
-        #print "assigning coordinates for", self.name
+        #print("assigning coordinates for", self.name)
         if self.object_table:
-            #print "looking up object table", self.object_table
+            #print("looking up object table", self.object_table)
             assert self.object_table in self.image.object_by_name
             object_table = self.image.object_by_name[self.object_table]
             dir_index = object_table.seg_index
             if dir_index is None:
-                print "recursively assigning coordinates"
+                print("recursively assigning coordinates")
                 object_table.assign_coordinates()
                 dir_index = object_table.seg_index
-            #print "dir index", dir_index
+            #print("dir index", dir_index)
             self._set_dir_index(dir_index)
         assert self.dir_index is not None
         if self.seg_index is None:
-            #print "allocating a segment table entry"
+            #print("allocating a segment table entry")
             self._alloc_ote()
             #object_table = self.image.object_by_name[self.object_table]
             #self.ote = ObjectTableEntry(object_table)
-            #print "ote size", ote.size
+            #print("ote size", ote.size)
             #self.ote.allocate()
             #object_table.fields.append(ote)
-            #print "dir_index %d" % self.dir_index
-            #print "ote offset %d" % ote.offset
-            #self._set_seg_index(ote.offset / 16)
-        #print "%s assigned dir_index %d seg_index %d" % (self.name, self.dir_index, self.seg_index)
+            #print("dir_index %d" % self.dir_index)
+            #print("ote offset %d" % ote.offset)
+            #self._set_seg_index(ote.offset // 16)
+        #print("%s assigned dir_index %d seg_index %d" % (self.name, self.dir_index, self.seg_index))
 
 
 # attributes:
@@ -594,12 +591,13 @@ class Segment(Object):
         self.base_type = st.value.base_type
         self.processor_class = st.value.processor_class
 
-        self.min_size = 0
         self.phys_allocated = False
         self.phys_addr = None
         self.size = None
 
         self.min_size = segment_tree.get('min_size')
+        if self.min_size is None:
+            self.min_size = 0
         #self.phys_addr = segment_tree.get('phys_addr')  # address of segment prefix
 
         self.allocation = Allocation(65536, self.name)
@@ -612,18 +610,17 @@ class Segment(Object):
         # XXX for system segments, need to include the fields that are
         #     defined for the system segment, but may not be present in
         #     the image definition.
-        #print "segment %s type" % self.name, self.segment_type
-        #print "st", st.value
+        #print("segment %s type" % self.name, self.segment_type)
+        #print("st", st.value)
         for arch_field in st.value.fields:
             if arch_field.size is None:
-                #print "arch field %s offset %d size unk." % (arch_field.name, arch_field.offset)
+                #print("arch field %s offset %d size unk." % (arch_field.name, arch_field.offset))
                 pass
             elif arch_field.offset is None:
-                print "arch field %s offset unk." % (arch_field.name)
+                #print("arch field %s offset unk." % (arch_field.name))
                 pass
             else:   
-                if arch_field.offset, arch_field.size
-                print "arch field %s offset %d size %d" % (arch_field.name, arch_field.offset, arch_field.size)
+                #print("arch field %s offset %d size %d" % (arch_field.name, arch_field.offset, arch_field.size))
                 pass
 
     def abs_min_size(self):
@@ -639,16 +636,22 @@ class Segment(Object):
                 try:
                     field.allocate()
                 except Allocation.AllocationError as e:
-                     print "segment %s field allocation error, pos %d, size %d" % (self.name, field.offset, field.size)
+                     print("segment %s field allocation error, pos %d, size %d" % (self.name, field.offset, field.size))
 
         # then allocate fields at dynamic offsets
         for field in self.fields:
             if not field.allocated:
                 field.allocate()
 
-        self.size = max(self.allocation.highest_allocated_byte() + 1,
+        try:
+            self.size = max(self.allocation.highest_allocated_byte() + 1,
                         self.min_size,
                         self.abs_min_size())
+        except Exception as e:
+            print(e)
+            print(self.allocation.highest_allocated_byte(),
+                  self.min_size,
+                  self.abs_min_size())
         return self.size
 
     def allocate_physical_memory(self):
@@ -658,7 +661,7 @@ class Segment(Object):
         # allow 8 bytes for segment prefix, below the phys addr
         # and round up size to a multiple of 8
         rounded_size_with_prefix = 8 + ((self.size + 7) & ~7)
-        #print "segment %s orig size %d rounded with prefix %d" % (self.name, self.size, rounded_size_with_prefix)
+        #print("segment %s orig size %d rounded with prefix %d" % (self.name, self.size, rounded_size_with_prefix))
         if self.phys_addr is None:
             self.phys_addr = self.image.phys_mem_allocation.allocate_bytes(size = rounded_size_with_prefix) + 8
         else:
@@ -666,7 +669,7 @@ class Segment(Object):
             self.image.phys_mem_allocation.allocate_bytes(size = rounded_size_with_prefix,
                                                           pos = self.phys_addr - 8,
                                                           fixed = True)
-        #print "segment %s coord (%d, %d): phys addr %06x, size %d" % (self.name, self.dir_index, self.seg_index, self.phys_addr, self.size)
+        #print("segment %s coord (%d, %d): phys addr %06x, size %d" % (self.name, self.dir_index, self.seg_index, self.phys_addr, self.size))
         self.phys_allocated = True
 
 
@@ -679,7 +682,7 @@ class Segment(Object):
         pa = self.phys_addr + offset
         try:
             if offset + 8 * len(data) > (self.size * 8):
-                print "offset %d, size %d, byte count %d" % (offset, self.size, len(data))
+                print("offset %d, size %d, byte count %d" % (offset, self.size, len(data)))
             assert offset + 8 * len(data) <= (self.size * 8)
             self.image.phys_mem[pa:pa + len(data)] = data
         except TypeError:
@@ -775,7 +778,7 @@ class SegmentTable(DataSegment):
         while self.allocation.discontiguous() or free_descriptor_count < self.min_free_descriptors:
             free_descriptor = FreeDescriptor(self)
             free_descriptor.allocate()
-            index = free_descriptor.offset / 16
+            index = free_descriptor.offset // 16
             self.fields.append(free_descriptor)
             prev_descriptor.set_free_index(index)
             free_descriptor_count += 1
@@ -910,17 +913,17 @@ class Image(object):
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser(description='iAPX 432 Image Builder')
     arg_parser.add_argument('-a', '--arch',
-                            type=argparse.FileType('r', 0),
-                            default='definitions.xml',
+                            type=argparse.FileType('r'),
+                            default='iapx432-1.0.xml',
                             help='architecture definition (XML)')
     arg_parser.add_argument('--list-segments',
                             action='store_true')
     arg_parser.add_argument('image_definition',
-                            type=argparse.FileType('r', 0),
+                            type=argparse.FileType('r'),
                             nargs=1,
                             help='image definition (XML)')
     arg_parser.add_argument('image_binary',
-                            type=argparse.FileType('wb', 0),
+                            type=argparse.FileType('wb'),
                             nargs=1,
                             help='image binary output')
 
@@ -934,36 +937,36 @@ if __name__ == '__main__':
     args.image_definition[0].close()
     image = Image(arch, image_tree)
 
-    print "assigning coordinates of objects"
+    print("assigning coordinates of objects")
     image.assign_coordinates()
 
     # XXX need a pass after assigning coordinates parse contents of data
     # segments, so that intersegment references can be resolved
 
-    print "computing sizes of segments"
+    print("computing sizes of segments")
     image.compute_segment_sizes()
 
-    print "allocating physical memory to objects"
+    print("allocating physical memory to objects")
     image.allocate_physical_memory()
     
-    print "writing segments to image"
+    print("writing segments to image")
     image.write_segments()
 
     image_size = image.get_size()
-    print "image size %d (0x%06x)" % (image_size, image_size)
+    print("image size %d (0x%06x)" % (image_size, image_size))
 
-    print "writing image to output file"
+    print("writing image to output file")
     image.write_to_file(args.image_binary[0])
     
 
-    print '%d objects in image' % len(image.object_by_coord)
+    print('%d objects in image' % len(image.object_by_coord))
 
     if args.list_segments:
         for k in sorted(image.object_by_coord.keys()):
             d = image.object_by_coord[k]
-            print "%06x" % d.phys_addr, k, d.name
+            print("%06x" % d.phys_addr, k, d.name)
 
     for obj in image.object_by_name.values():
         if obj.dir_index != 2 and obj.reference_count == 0:
-            print "no AD references", obj.name
+            print("no AD references", obj.name)
 

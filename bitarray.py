@@ -1,20 +1,20 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
+# Copyright 2015, 2016 Eric Smith <spacewar@gmail.com>
 
-# b = bitarray(size)
-# b = bitarray(size, from_bytes=bytearray, bit_offset=3)
+# b = BitArray(size)
+# b = BitArray(size, from_bytes=bytearray, bit_offset=3)
 
-# When a bitarray is interpreted as an integer, the bit at index 0 is the
+# When a BitArray is interpreted as an integer, the bit at index 0 is the
 # LSB, and the bit at the highest index is the MSB.  The weight of the
 # bit at index i is thus 2**i (except MSB in signed interpretation)
 
-from __future__ import division
-from __future__ import print_function
 from collections import Sequence, MutableSequence
 
-class bitarray(MutableSequence):
-    def __init__(self, len):
+class BitArray(MutableSequence):
+    def __init__(self, len, from_bytes = None, bit_offset = None, signed = False):
         self._len = len
         self._bits = bytearray((self._len + 7) // 8)
+        self._signed = signed
         # super().__init__()
 
     def __getitem__(self, key):
@@ -35,7 +35,7 @@ class bitarray(MutableSequence):
                 return bitarray(0)  # empty slice
             start_i = start // 8
             stop_i = (stop + 7) // 8
-            return bitarray(stop - start,
+            return BitArray(stop - start,
                             from_bytes = self._bits[start_i : stop_i],
                             bit_offset = start % 8)
         raise TypeError
@@ -62,12 +62,12 @@ class bitarray(MutableSequence):
         if stop < start:
             stop = start  # empty slice
         width = stop - start
-        #if isinstance(value, bitarray):
+        #if isinstance(value, BitArray):
             # try to optimize this case
         if isinstance(value, Sequence):
             if len(value) != width:
                 raise ValueError
-            for i in xrange(width):
+            for i in range(width):
                 if not 0 <= value[i] <= 1:
                     raise ValueError
                 self[start + i] = value[i]
@@ -102,9 +102,15 @@ class bitarray(MutableSequence):
     def insert(self, key, value):
         raise NotImplementedError
 
+    def __int__(self):
+        if self._signed:
+            return self.as_signed_int()
+        else:
+            return self.as_unsigned_int()
+
     def as_unsigned_int(self):
         v = 0
-        for i in xrange(len(self._bits) - 1, -1, -1):
+        for i in range(len(self._bits) - 1, -1, -1):
             v = (v << 8) | self._bits[i]
         return v
     
@@ -126,7 +132,7 @@ if __name__ == '__main__':
         print('  unsigned:', x.as_unsigned_int())
         print('  signed:',   x.as_signed_int())
 
-    ba = bitarray(16)
+    ba = BitArray(16)
     pba('init', ba)
 
     ba[15] = 1

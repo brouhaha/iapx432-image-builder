@@ -1,34 +1,34 @@
-#!/usr/bin/python2
-
-# Copyright 2014, 2015 Eric Smith <spacewar@gmail.com>
+#!/usr/bin/env python3
+# Copyright 2014, 2015, 2016 Eric Smith <spacewar@gmail.com>
 
 import argparse
 import collections
 import re
 import sys
+import warnings
 import xml.etree.ElementTree
 
 class Arch(object):
-    symbol_t = collections.namedtuple('symbol_t', ['type',
-                                                   'value'])
+    Symbol = collections.namedtuple('Symbol', ['type',
+                                               'value'])
 
-    size_value_t = collections.namedtuple('size_value_t', ['size',
-                                                           'value'])
-    size_value_t.__str__ = lambda(self): ("{:0" + str(self.size) + "b}").format(self.value)
+    SizedValue = collections.namedtuple('SizedValue', ['size',
+                                                       'value'])
+    SizedValue.__str__ = lambda self: ("{:0" + str(self.size) + "b}").format(self.value)
 
-    format_t = collections.namedtuple('format_t', ['encoding',
-                                                   'operands'])
+    Format = collections.namedtuple('Format', ['encoding',
+                                               'operands'])
 
-    class_t = collections.namedtuple('class_t', ['encoding',
-                                                 'reserved',
-                                                 'refs',
-                                                 'branch_ref',
-                                                 'operators'])
+    Class = collections.namedtuple('Class', ['encoding',
+                                             'reserved',
+                                             'refs',
+                                             'branch_ref',
+                                             'operators'])
 
-    operator_t = collections.namedtuple('operator_t', ['names',
-                                                       'id',
-                                                       'clas',
-                                                       'encoding']) # opcode
+    Operator = collections.namedtuple('Operator', ['names',
+                                                   'id',
+                                                   'clas',
+                                                   'encoding']) # opcode
 
     class Field(object):
         # a factory method
@@ -63,7 +63,7 @@ class Arch(object):
                   'type': self.parse_type }
             self.type = None
             self.size = 32 # bits
-            for k, v in tree.attrib.iteritems():
+            for k, v in tree.attrib.items():
                 d[k](k, v)
             assert self.offset is not None
             self.parent.field_by_offset[self.offset] = self
@@ -89,11 +89,11 @@ class Arch(object):
                   'type':  self.parse_type,
                   'name':  self.parse_name }
             self.type = None
-            for k, v in tree.attrib.iteritems():
+            for k, v in tree.attrib.items():
                 d[k](k, v)
             if self.offset is None:
-                print "no offset for field", self.name
-                print tree.attrib
+                print("no offset for field", self.name)
+                print(tree.attrib)
             assert self.offset is not None
             #assert self.size is not None
             self.parent.field_by_offset[self.offset] = self
@@ -114,7 +114,7 @@ class Arch(object):
                   'name': self.parse_name }
             self.index = None
             self.name = None
-            for k, v in tree.attrib.iteritems():
+            for k, v in tree.attrib.items():
                 d[k](k, v)
 
 
@@ -144,7 +144,7 @@ class Arch(object):
             self.base_type = None
             self.system_type = None
             self.processor_class = None
-            for k, v in tree.attrib.iteritems():
+            for k, v in tree.attrib.items():
                 d[k](tree, k, v)
             assert self.name is not None
             assert self.base_type is not None
@@ -186,8 +186,8 @@ class Arch(object):
         for e in base:
             if exclusive:
                 if e.tag not in element_names:
-                    print 'tag', e.tag, 'element names', element_names
-                    print e
+                    print('tag', e.tag, 'element names', element_names)
+                    print(e)
                     sys.stdout.flush()
                 assert e.tag in element_names
             else:
@@ -218,7 +218,7 @@ class Arch(object):
             assert sz2 <= sz
         else:
             sz = sz2
-        return self.size_value_t(sz, v)
+        return self.SizedValue(sz, v)
 
     def is_prefix_of(self, v1, v2):
         return ((v1.size <= v2.size) and
@@ -297,20 +297,19 @@ class Arch(object):
     # (neither can be a prefix of the other)
     # XXX would be nice to report missing encodings
     def validate_encodings (self, d, name, attr='encoding', check_missing=True):
-        items = d.values()
+        items = list(d.values())
         if len(items) == 0:
             return
-        max_len = 0
-        for i in range(len(items)-1):
-            max_len = max(max_len, getattr(items[i], attr).size)
+        max_len = max([getattr(i, attr).size for i in items])
+
         for i in range(len(items)-1):
             enc_i = getattr(items[i], attr)
             for j in range(i+1, len(items)):
                 enc_j = getattr(items[j], attr)
                 if self.is_prefix_of(enc_i, enc_j):
-                    print name, enc_i, 'is prefix of', enc_j
+                    print(name, enc_i, 'is prefix of', enc_j)
                 if self.is_prefix_of(enc_j, enc_i):
-                    print name, enc_j, 'is prefix of', enc_i
+                    print(name, enc_j, 'is prefix of', enc_i)
                 assert ((not self.is_prefix_of(enc_i, enc_j)) and
                         (not self.is_prefix_of(enc_j, enc_i)))
 
@@ -319,7 +318,7 @@ class Arch(object):
         bin_entries = self.expand_encoding_dict(d)
         # for i in range(1 << max_len):
         #     if bin_entries [i] is None:
-        #         print "no %s entry for %s" % (name, ("{:0" + str(max_len) + "b}").format(i))
+        #         print("no %s entry for %s" % (name, ("{:0" + str(max_len) + "b}").format(i)))
         assert None not in bin_entries
 
 
@@ -380,7 +379,7 @@ class Arch(object):
                 refs, branch_ref = self.parse_operands_string(operands)
                 assert operands not in self.class_by_operands
             assert encoding not in self.class_by_encoding
-            c = self.class_t(encoding, reserved, refs, branch_ref, { })
+            c = self.Class(encoding, reserved, refs, branch_ref, { })
             self.class_by_operands [operands] = c
             self.class_by_encoding [encoding] = c
         self.validate_encodings(self.class_by_encoding, 'class')
@@ -396,7 +395,7 @@ class Arch(object):
                 operand_list = operands.split(',')
             order = len(operand_list)
             encoding = self.size_and_value (formats[operands] ['encoding'])
-            f = self.format_t(encoding, operand_list)
+            f = self.Format(encoding, operand_list)
             assert operands not in self.format_by_operands
             assert encoding not in self.format_by_order_encoding [order]
             self.format_by_operands [operands] = f
@@ -423,7 +422,7 @@ class Arch(object):
                 assert encoding == operator.encoding
                 operator.names.append(name)
             else:
-                operator = self.operator_t([name], id, clas, encoding)
+                operator = self.Operator([name], id, clas, encoding)
                 self.operator_by_id [id] = operator
                 # also add operator to class operator dict
                 assert encoding not in clas.operators
@@ -449,21 +448,22 @@ class Arch(object):
                 self.parse_instruction_set(child)
             elif child.tag == 'enumeration':
                 if name in self.symbols:
-                    print "enumeration problem:", name
+                    print("enumeration problem:", name)
                 assert name not in self.symbols
-                self.symbols[name] = self.symbol_t(child.tag,
-                                                   self.parse_enumeration(child))
+                self.symbols[name] = self.Symbol(child.tag,
+                                                 self.parse_enumeration(child))
             elif child.tag == 'struct' or child.tag == 'union':
                 assert name not in self.symbols
-                self.symbols[name] = self.symbol_t(child.tag,
-                                                   self.get_struct(child))
+                self.symbols[name] = self.Symbol(child.tag,
+                                                 self.get_struct(child))
             elif child.tag == 'segment':
                 assert name not in self.symbols
-                self.symbols[name] = self.symbol_t(child.tag, Arch.Segment(self, child))
+                self.symbols[name] = self.Symbol(child.tag,
+                                                 Arch.Segment(self, child))
 
 
 #    XXX            segment = arch.Segment(base_type, system_type)
-# XXX                self.symbols[name] = self.symbol_t(child.tag, segment)
+# XXX                self.symbols[name] = self.Symbol(child.tag, segment)
 
 
 def gen_operator_h(arch, f):
@@ -584,34 +584,33 @@ def gen_tables_c(arch, f):
     f.write('\n')
 
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='iAPX 432 Architecture Parser')
     parser.add_argument('-a', '--arch',
-                        type=argparse.FileType('r', 0),
-                        default='definitions.xml',
+                        type=argparse.FileType('r'),
+                        default='iapx432-1.0.xml',
                         help='architecture definition (XML)')
     parser.add_argument('--gen-operator-h',
                         nargs='?',
-                        type=argparse.FileType('w', 0),
-                        const='operator.h',
+                        type=argparse.FileType('w'),
+                        default='operator.h',
                         help='generate C operator definitions header file')
     parser.add_argument('--gen-operator-c',
                         nargs='?',
-                        type=argparse.FileType('w', 0),
-                        const='operator.c',
+                        type=argparse.FileType('w'),
+                        default='operator.c',
                         help='generate C operator definitions source file')
     parser.add_argument('--gen-tables-c',
                         nargs='?',
-                        type=argparse.FileType('w', 0),
-                        const='tables.c',
+                        type=argparse.FileType('w'),
+                        default='tables.c',
                         help='generate C tables source file')
 
     args = parser.parse_args()
 
     arch_tree = xml.etree.ElementTree.parse(args.arch)
     args.arch.close()
-    arch = arch(arch_tree)
+    arch = Arch(arch_tree)
 
     if args.gen_operator_h:
         gen_operator_h(arch, args.gen_operator_h)
