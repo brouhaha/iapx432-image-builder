@@ -26,9 +26,9 @@ class Arch(object):
     Symbol = collections.namedtuple('Symbol', ['type',
                                                'value'])
 
-    SizedValue = collections.namedtuple('SizedValue', ['size',
+    SizedValue = collections.namedtuple('SizedValue', ['size_bits',
                                                        'value'])
-    SizedValue.__str__ = lambda self: ("{:0" + str(self.size) + "b}").format(self.value)
+    SizedValue.__str__ = lambda self: ("{:0" + str(self.size_bits) + "b}").format(self.value)
 
     Format = collections.namedtuple('Format', ['encoding',
                                                'operands'])
@@ -58,14 +58,14 @@ class Arch(object):
         def __init__(self, parent):
             self.parent = parent
             self.name = None
-            self.offset = None
-            self.size = None
+            self.offset_bits = None
+            self.size_bits = None
 
     class AD(Field):
         def parse_index(self, k, v):
             index = int(v)
             assert 0 <= index <= 16383
-            self.offset = 32 * index
+            self.offset_bits = 32 * index
         
         def parse_type(self, k, v):
             pass
@@ -76,22 +76,22 @@ class Arch(object):
                   'name': self.parse_name,
                   'type': self.parse_type }
             self.type = None
-            self.size = 32 # bits
+            self.size_bits = 32 # bits
             for k, v in tree.attrib.items():
                 d[k](k, v)
-            assert self.offset is not None
-            self.parent.field_by_offset[self.offset] = self
+            assert self.offset_bits is not None
+            self.parent.field_by_offset[self.offset_bits] = self
             if self.name is not None:
                 self.parent.field_by_name[self.name] = self
 
     class DataField(Field):
         def parse_offset(self, k, v):
-            self.offset = int(v, 0)
-            assert 0 <= self.offset < (1 << 19)
+            self.offset_bits = int(v, 0)
+            assert 0 <= self.offset_bits < (1 << 19)
 
         def parse_size(self, k, v):
-            self.size = int(v, 0)
-            assert 1 <= self.size <= (1 << 19)
+            self.size_bits = int(v, 0)
+            assert 1 <= self.size_bits <= (1 << 19)
 
         def parse_type(self, k, v):
             self.type = v
@@ -105,12 +105,12 @@ class Arch(object):
             self.type = None
             for k, v in tree.attrib.items():
                 d[k](k, v)
-            if self.offset is None:
+            if self.offset_bits is None:
                 print("no offset for field", self.name)
                 print(tree.attrib)
-            assert self.offset is not None
-            #assert self.size is not None
-            self.parent.field_by_offset[self.offset] = self
+            assert self.offset_bits is not None
+            #assert self.size_bits is not None
+            self.parent.field_by_offset[self.offset_bits] = self
             if self.name is not None:
                 self.parent.field_by_name[self.name] = self
 
@@ -235,13 +235,13 @@ class Arch(object):
         return self.SizedValue(sz, v)
 
     def is_prefix_of(self, v1, v2):
-        return ((v1.size <= v2.size) and
-                (v1.value == v2.value & ((1 << v1.size) - 1)))
+        return ((v1.size_bits <= v2.size_bits) and
+                (v1.value == v2.value & ((1 << v1.size_bits) - 1)))
 
     def max_encoding_len(self, d, attr='encoding'):
         max_len = 0
         for v in d.values():
-            max_len = max(max_len, getattr(v, attr).size)
+            max_len = max(max_len, getattr(v, attr).size_bits)
         return max_len
 
     # does not check for missing entries, use validate_encodings()
@@ -260,7 +260,7 @@ class Arch(object):
         for v in d.values():
             # enc_i = getattr(items[i], attr)
             enc_i = getattr(v, attr)
-            for j in range(enc_i.value, 1 << max_len, 1 << enc_i.size):
+            for j in range(enc_i.value, 1 << max_len, 1 << enc_i.size_bits):
                 assert bin_entries [j] is None
                 # bin_entries [j] = items [i]
                 bin_entries [j] = v
@@ -292,7 +292,7 @@ class Arch(object):
         for e in ed:
             (es, v) = self.size_and_value(ed[e]['encoding'], size)
             ed[e]['value'] = v
-            ed[e]['size'] = es
+            ed[e]['size_bits'] = es
         return ed
 
     # also gets unions
@@ -314,7 +314,7 @@ class Arch(object):
         items = list(d.values())
         if len(items) == 0:
             return
-        max_len = max([getattr(i, attr).size for i in items])
+        max_len = max([getattr(i, attr).size_bits for i in items])
 
         for i in range(len(items)-1):
             enc_i = getattr(items[i], attr)
@@ -571,7 +571,7 @@ def gen_tables_c(arch, f):
         f.write('{\n')
         for i in range(len(operators)):
             f.write('  /* %5s */ { %d, %3d, op_%s },\n' % (str(operators[i].encoding),
-                                                         operators[i].encoding.size,
+                                                         operators[i].encoding.size_bits,
                                                          operators[i].id,
                                                          operators[i].names[0]));
         f.write('};\n')
@@ -585,7 +585,7 @@ def gen_tables_c(arch, f):
     for clas in classes:
         opcode_table_name = 'class_%s_opcode_table' % str(clas.encoding)
         f.write('  /* %6s */ { %d, %d, { '  % (str(clas.encoding),
-                                               clas.encoding.size,
+                                               clas.encoding.size_bits,
                                                len(clas.refs)))
         for i in range(len(clas.refs)):
             if i != 0:
