@@ -19,6 +19,8 @@
 
   <segment name="process_1_object_table" type="object_table_data_segment"/>
 
+  <segment name="process_2_object_table" type="object_table_data_segment"/>
+
   <segment name="null_program_object_table" type="object_table_data_segment"/>
 
   <segment name="program_1_object_table" type="object_table_data_segment"/>
@@ -66,6 +68,7 @@
   <segment name="normal_dispatch_port_access_segment" type="port_access_segment" size="64" object_table="dispatch_port_object_table">
     <ad index="port_data_segment" segment="normal_dispatch_port_data_segment"/>
     <ad index="4"                segment="process_1_process_access_segment"/>
+    <ad index="5"                segment="process_2_process_access_segment"/>
   </segment>
 
   <segment name="alarm_dispatch_port_data_segment" type="port_data_segment" object_table="dispatch_port_object_table">
@@ -207,7 +210,7 @@
     <ad index="reconfiguration_port"         segment="reconfiguration_dispatch_port_access_segment"/>
     <ad index="reconfiguration_port_carrier" segment="processor_1_reconfiguration_port_processor_carrier_access_segment"/>
     <ad index="diagnostic_port"              segment="diagnostic_dispatch_port_access_segment"/>
-    <ad index="diagnostic_port_carrier"      segment="processor_1_reconfiguration_port_processor_carrier_access_segment"/>
+    <ad index="diagnostic_port_carrier"      segment="processor_1_diagnostic_port_processor_carrier_access_segment"/>
   </segment>
 
   <segment name="processor_1_normal_port_processor_carrier_data_segment" type="carrier_data_segment" object_table="processor_1_object_table">
@@ -254,7 +257,7 @@
     <ad index="carried_object"       segment="processor_1_processor_access_segment"/>
   </segment>
 
-  <segment name="delay_carrier_access_segment" type="carrier_access_segment" object_table="process_1_object_table">
+  <segment name="delay_carrier_access_segment" type="carrier_access_segment" object_table="process_2_object_table">
     <!-- XXX probably should be associated with the process -->
     <ad index="carrier_data_segment"/>
     <ad index="carried_object"/>
@@ -283,7 +286,6 @@
     <!-- XXX we don't have anything to receive from the fault port,
          but if the process faults we want it sent there anyhow, for
          post-mortem analysis of a memory dump -->
-
   </segment>
 
   <segment name="process_1_process_carrier_data_segment" type="carrier_data_segment" object_table="process_1_object_table">
@@ -296,6 +298,64 @@
   <segment name="process_1_root_operand_stack_data_segment" type="generic_data_segment" size="8192" object_table="process_1_object_table"/>
 
   <segment name="process_1_root_constants_data_segment" type="generic_data_segment" object_table="process_1_object_table">
+  </segment>
+
+  <segment name="process_1_global_access_segment" type="generic_access_segment" object_table="process_1_object_table">
+    <!-- The global SRO has to be accessible from somewhere, the process
+	 global access segment seems as good a place as any. -->
+    <ad segment="global_sro_access_segment"/>
+  </segment>
+
+  <segment name="process_1_root_context_data_segment" type="context_data_segment" object_table="process_1_object_table">
+  </segment>
+
+  <segment name="process_1_root_context_access_segment" type="context_access_segment" object_table="process_1_object_table">
+    <ad index="context_data_segment"   segment="process_1_root_context_data_segment"/>
+    <ad index="constants_data_segment" segment="process_1_root_constants_data_segment"/>
+    <!-- XXX null AD for previous context, not going to return -->
+    <!-- XXX null AD for message object -->
+    <ad index="current_context"        segment="process_1_root_context_access_segment"/>
+    <!-- XXX null ADs for entry access segments 1..3 -->
+    <ad index="domain_of_definition"   segment="null_program_domain_access_segment"/>
+    <ad index="operand_stack"          segment="process_1_root_operand_stack_data_segment"/>
+  </segment>
+
+  <segment name="process_2_process_data_segment" type="process_data_segment" object_table="process_2_object_table">
+  </segment>
+
+  <segment name="process_2_process_access_segment" type="process_access_segment" object_table="process_2_object_table">
+    <ad index="process_data_segment" segment="process_2_process_data_segment"/>
+    <ad index="current_context" segment="process_2_root_context_access_segment"/>
+    <ad index="global_access_segment" segment="process_2_global_access_segment"/>
+    <ad index="local_object_table" segment="process_2_object_table"/>
+    <ad index="process_carrier" segment="process_2_process_carrier_access_segment"/>
+    <ad index="dispatching_port" segment="normal_dispatch_port_access_segment"/>
+
+    <ad index="scheduling_port" segment="scheduling_port_access_segment"/>
+    <!-- XXX There isn't currently anything to receive from the
+         scheduling port. Ideally there would be a scheduling process
+         that receives a process from that port, and sets the period
+         count back to a large number, and sends it back to the
+         scheduling port. The scheduling process should reset its own
+         period count every time it does that. -->
+
+    <ad index="fault_port" segment="fault_port_access_segment"/>
+    <!-- XXX we don't have anything to receive from the fault port,
+         but if the process faults we want it sent there anyhow, for
+         post-mortem analysis of a memory dump -->
+
+  </segment>
+
+  <segment name="process_2_process_carrier_data_segment" type="carrier_data_segment" object_table="process_2_object_table">
+  </segment>
+
+  <segment name="process_2_process_carrier_access_segment" type="carrier_access_segment" object_table="process_2_object_table">
+    <ad index="carrier_data_segment" segment="process_2_process_carrier_data_segment"/>
+  </segment>
+
+  <segment name="process_2_root_operand_stack_data_segment" type="generic_data_segment" size="8192" object_table="process_2_object_table"/>
+
+  <segment name="process_2_root_constants_data_segment" type="generic_data_segment" object_table="process_2_object_table">
     <field name="uart_object_selector" type="object_selector" value="uart_segment"/>
     <field name="uart_data_register_displacement" type="ordinal" value="0"/>
     <field name="uart_control_status_register_displacement" type="ordinal" value="1"/>
@@ -307,25 +367,25 @@
     <field name="last"  type="short_ordinal" value="0x5a"/>
   </segment>
 
-  <segment name="process_1_global_access_segment" type="generic_access_segment" object_table="process_1_object_table">
+  <segment name="process_2_global_access_segment" type="generic_access_segment" object_table="process_2_object_table">
     <!-- The global SRO has to be accessible from somewhere, the process
 	 global access segment seems as good a place as any. -->
     <ad segment="global_sro_access_segment"/>
   </segment>
 
-  <segment name="process_1_root_context_data_segment" type="context_data_segment" object_table="process_1_object_table">
+  <segment name="process_2_root_context_data_segment" type="context_data_segment" object_table="process_2_object_table">
     <field name="c" type="short_ordinal" value="0"/>
   </segment>
 
-  <segment name="process_1_root_context_access_segment" type="context_access_segment" object_table="process_1_object_table">
-    <ad index="context_data_segment"   segment="process_1_root_context_data_segment"/>
-    <ad index="constants_data_segment" segment="process_1_root_constants_data_segment"/>
+  <segment name="process_2_root_context_access_segment" type="context_access_segment" object_table="process_2_object_table">
+    <ad index="context_data_segment"   segment="process_2_root_context_data_segment"/>
+    <ad index="constants_data_segment" segment="process_2_root_constants_data_segment"/>
     <!-- XXX null AD for previous context, not going to return -->
     <!-- XXX null AD for message object -->
-    <ad index="current_context"        segment="process_1_root_context_access_segment"/>
+    <ad index="current_context"        segment="process_2_root_context_access_segment"/>
     <!-- XXX null ADs for entry access segments 1..3 -->
     <ad index="domain_of_definition"   segment="program_1_root_domain_access_segment"/>
-    <ad index="operand_stack"          segment="process_1_root_operand_stack_data_segment"/>
+    <ad index="operand_stack"          segment="process_2_root_operand_stack_data_segment"/>
   </segment>
 
   <segment name="null_program_instruction_data_segment" type="instruction_data_segment" object_table="null_program_object_table">
@@ -355,68 +415,68 @@
     <code>
       <label name="init"/>
 
-      <assume eas="0" segment="process_1_root_context_access_segment"/>
+      <assume eas="0" segment="process_2_root_context_access_segment"/>
 
       <instruction op="move_character" format="ref1,stk">
-	<dref segment="process_1_root_constants_data_segment" displacement="first"/>
-	<dref segment="process_1_root_constants_data_segment" displacement="uart_reset_byte"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="first"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="uart_reset_byte"/>
       </instruction>
 
       <instruction op="convert_character_to_short_ordinal" format="ref1,stk">
-	<dref segment="process_1_root_context_data_segment" displacement="c"/>
+	<dref segment="process_2_root_context_data_segment" displacement="c"/>
       </instruction>
 
       <instruction op="move_to_interconnect" format="ref1,ref2,stk">
-	<dref segment="process_1_root_constants_data_segment" displacement="uart_object_selector"/>
-	<dref segment="process_1_root_constants_data_segment" displacement="uart_data_register_displacement"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="uart_object_selector"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="uart_data_register_displacement"/>
       </instruction>
 
       <instruction op="move_character" format="ref1,stk">
-	<dref segment="process_1_root_constants_data_segment" displacement="first"/>
-	<dref segment="process_1_root_constants_data_segment" displacement="uart_mode_byte"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="first"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="uart_mode_byte"/>
       </instruction>
 
       <instruction op="convert_character_to_short_ordinal" format="ref1,stk">
-	<dref segment="process_1_root_context_data_segment" displacement="c"/>
+	<dref segment="process_2_root_context_data_segment" displacement="c"/>
       </instruction>
 
       <instruction op="move_to_interconnect" format="ref1,ref2,stk">
-	<dref segment="process_1_root_constants_data_segment" displacement="uart_object_selector"/>
-	<dref segment="process_1_root_constants_data_segment" displacement="uart_data_register_displacement"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="uart_object_selector"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="uart_data_register_displacement"/>
       </instruction>
 
       <instruction op="move_character" format="ref1,stk">
-	<dref segment="process_1_root_constants_data_segment" displacement="first"/>
-	<dref segment="process_1_root_constants_data_segment" displacement="uart_command_byte"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="first"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="uart_command_byte"/>
       </instruction>
 
       <instruction op="convert_character_to_short_ordinal" format="ref1,stk">
-	<dref segment="process_1_root_context_data_segment" displacement="c"/>
+	<dref segment="process_2_root_context_data_segment" displacement="c"/>
       </instruction>
 
       <instruction op="move_to_interconnect" format="ref1,ref2,stk">
-	<dref segment="process_1_root_constants_data_segment" displacement="uart_object_selector"/>
-	<dref segment="process_1_root_constants_data_segment" displacement="uart_data_register_displacement"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="uart_object_selector"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="uart_data_register_displacement"/>
       </instruction>
 
       <label name="start"/>
 
       <instruction op="move_character" format="ref1,ref2">
-	<dref segment="process_1_root_constants_data_segment" displacement="first"/>
-	<dref segment="process_1_root_context_data_segment" displacement="c"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="first"/>
+	<dref segment="process_2_root_context_data_segment" displacement="c"/>
       </instruction>
 
       <label name="loop"/>
 
       <instruction op="move_from_interconnect" format="ref1,ref2,stk">
-	<dref segment="process_1_root_constants_data_segment" displacement="uart_object_selector"/>
-	<dref segment="process_1_root_constants_data_segment" displacement="uart_control_status_register_displacement"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="uart_object_selector"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="uart_control_status_register_displacement"/>
       </instruction>
 
       <instruction op="convert_short_ordinal_to_character" format="stk,stk"/>
 
       <instruction op="and_character" format="stk,ref1,stk">
-	<dref segment="process_1_root_constants_data_segment" displacement="uart_tx_ready_mask"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="uart_tx_ready_mask"/>
       </instruction>
 
       <instruction op="branch_false" format="br">
@@ -424,21 +484,21 @@
       </instruction>
 
       <instruction op="convert_character_to_short_ordinal" format="ref1,stk">
-	<dref segment="process_1_root_context_data_segment" displacement="c"/>
+	<dref segment="process_2_root_context_data_segment" displacement="c"/>
       </instruction>
 
       <instruction op="move_to_interconnect" format="ref1,ref2,stk">
-	<dref segment="process_1_root_constants_data_segment" displacement="uart_object_selector"/>
-	<dref segment="process_1_root_constants_data_segment" displacement="uart_data_register_displacement"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="uart_object_selector"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="uart_data_register_displacement"/>
       </instruction>
 
       <instruction op="increment_character" format="ref1">
-	<dref segment="process_1_root_context_data_segment" displacement="c"/>
+	<dref segment="process_2_root_context_data_segment" displacement="c"/>
       </instruction>
 
       <instruction op="greater_than_character_character" format="ref1,ref2,stk">
-	<dref segment="process_1_root_context_data_segment" displacement="c"/>
-	<dref segment="process_1_root_constants_data_segment" displacement="last"/>
+	<dref segment="process_2_root_context_data_segment" displacement="c"/>
+	<dref segment="process_2_root_constants_data_segment" displacement="last"/>
       </instruction>
 
       <instruction op="branch_false" format="stk,br">
