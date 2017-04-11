@@ -1,6 +1,6 @@
 # iapx432-image-builder - Build iAPX 432 executable image from XML description
 
-Copyright 2014, 2015, 2016 Eric Smith <spacewar@gmail.com>
+Copyright 2014, 2015, 2016, 2017 Eric Smith <spacewar@gmail.com>
 
 iapx432-image-builder development is hosted at the
 [iapx432-image-builder Github repository](https://github.com/brouhaha/iapx432-image-builder/).
@@ -19,7 +19,7 @@ An iAPX 432 system typically contained two kinds of processors:
   microprocessors, the Attached Processor (AP), such as an 8085, 8086,
   or 8088.
 
-The iAPX 432 system hardware and microcode implmented an
+The iAPX 432 system hardware and microcode implemented an
 object-oriented capability-based computer architecture, where all
 software-accessible memory was organized as objects, some with
 architecture-defined semantics.  A software process was only able to
