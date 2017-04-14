@@ -810,7 +810,7 @@ class SegmentTable(DataSegment):
         while self.allocation.discontiguous() or free_descriptor_count < self.min_free_descriptors:
             free_descriptor = FreeDescriptor(self)
             free_descriptor.allocate()
-            index = free_descriptor.offset_bits // 16
+            index = free_descriptor.offset_bits // 128
             self.fields.append(free_descriptor)
             prev_descriptor.set_free_index(index)
             free_descriptor_count += 1
