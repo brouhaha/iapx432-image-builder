@@ -25,7 +25,7 @@
 
   <segment name="program_1_object_table" type="object_table_data_segment"/>
 
-  <segment name="dynamic_object_table" type="object_table_data_segment" reserve="100"/>
+  <segment name="dynamic_object_table" type="object_table_data_segment" reserve="20"/>
 
   <segment name="global_sro_data_segment" type="storage_resource_data_segment" object_table="system_object_table">
     <field name="beginning_block_index" value="1"/>
