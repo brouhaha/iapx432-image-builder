@@ -7,7 +7,9 @@
 
 <image>
 
-  <segment name="object_table_directory" type="object_table_data_segment" object_table="object_table_directory" reserve="32"/>
+  <segment name="object_table_directory" type="object_table_data_segment" object_table="object_table_directory"/>
+  <!-- We don't reserve any room for more object tables, as we don't create
+       them dynamically. -->
 
   <segment name="processor_table" type="object_table_data_segment" seg_index="1"/>
 
