@@ -384,7 +384,7 @@ class ObjectTableHeader(ObjectTableEntry):
     def set_free_index(self, index):
         self.free_index = index
 
-    # The end index is ony needed for stack OTs
+    # For Rel. 3 arch, the end index is only needed for stack OTs.
     def set_end_index(self, index):
         self.end_index = index
 
@@ -427,7 +427,7 @@ class StorageDescriptor(ObjectTableEntry):
                               (0   << 6) |                        # altered
                               (0   << 7) |                        # accessed
                               (self.obj.phys_addr << 8))
-        self.descriptor[1] = self.obj.size_bits // 8
+        self.descriptor[1] = (self.obj.size_bits // 8) - 1
         self.descriptor[2] = ((self.obj.system_type << 0) |       # system type
                               (self.obj.processor_class << 5) |   # processor class
                               (0   << 8) |                        # reclamation
@@ -685,10 +685,10 @@ class Segment(Object):
         # and round up size to a multiple of 8
         rounded_size_with_prefix = 64 + self.size_bits
         if rounded_size_with_prefix % 64 != 0:
-            rounded_size_with_prefix += 8 - (rounded_size_with_prefix % 64)
+            rounded_size_with_prefix += 64 - (rounded_size_with_prefix % 64)
         #print("segment %s orig size %d rounded with prefix %d" % (self.name, self.size_bits, rounded_size_with_prefix))
         if self.phys_addr is None:
-            self.phys_addr = self.image.phys_mem_allocation.allocate(size = rounded_size_with_prefix) + 8
+            self.phys_addr = self.image.phys_mem_allocation.allocate(size = rounded_size_with_prefix // 8)
         else:
             # segment is at specified address
             self.image.phys_mem_allocation.allocate(size = rounded_size_with_prefix // 8,
@@ -997,7 +997,7 @@ if __name__ == '__main__':
     if args.list_segments:
         for k in sorted(image.object_by_coord.keys()):
             d = image.object_by_coord[k]
-            print("%06x" % d.phys_addr, k, d.name)
+            print("%06x..%06x" % (d.phys_addr, d.phys_addr + d.size_bits // 8 - 1), k, d.name)
 
     for obj in image.object_by_name.values():
         if obj.dir_index != 2 and obj.reference_count == 0:
