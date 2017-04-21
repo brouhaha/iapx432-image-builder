@@ -62,7 +62,7 @@ and the binary image output file:
 
 * `builder image.xml image.bin`
 
-## License information for Python source files
+## License information
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of version 3 of the GNU General Public License
@@ -75,9 +75,3 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-## License information for XML files
-
-The architecture specification files and sample image specification
-file are licensed under the terms of the Creative Commons
-Attribution-ShareAlike 4.0 International license.
