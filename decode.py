@@ -212,22 +212,34 @@ class Segment:
     _mem_map = bitarray(1<<24)
 
     # Do not construct a Segment directly! Use the get_segment() method.
-    def __init__(self, image, base, length, coord, guard = False):
+    def __init__(self, image, base, length, coord, descriptor, temp = False, guard = False):
         assert guard
         if Segment._image is None:
             assert image is not None
             Segment._image = image
         self.base = base
         self.length = length
+        self.descriptor = descriptor
         self.prefix = image[base-8:base]
         self.ad_image = AccessDescriptor().load_from_image(self.prefix, 0)
-        assert self.ad_image.dir_index == coord.dir_index
-        assert self.ad_image.seg_index == coord.seg_index
+
+        #assert self.ad_image.dir_index == coord.dir_index
+        #assert self.ad_image.seg_index == coord.seg_index
+        if (self.ad_image.dir_index != coord.dir_index or
+            self.ad_image.seg_index != coord.seg_index):
+            print('ad image coords %d/%d don''t match expected coords %d/%d' % (self.ad_image.dir_index, self.ad_image.seg_index, coord.dir_index, coord.seg_index))
+
         l2 = length
         if l2 % 8 != 0:
             l2 += 8 - (l2 % 8)
-        assert not Segment._mem_map[base-8:base+12].any()
-        Segment._mem_map[base-8:base+l2] = True
+
+        #assert not Segment._mem_map[base-8:base+12].any()
+        if Segment._mem_map[base-8:base+12].any():
+            print ('segment overlap!')
+
+        print('segment %d/%d at %06x..%06x' % (coord.dir_index, coord.seg_index, base-8, base+length))
+        if not temp:
+            Segment._mem_map[base-8:base+l2] = True
         self.data = image[base:base+length]
 
     @classmethod
@@ -240,20 +252,30 @@ class Segment:
             assert image is None and base is None and length is None
             descriptor = object_table[coord.dir_index][coord.seg_index]
             assert isinstance(descriptor, StorageDescriptor)
-            Segment._segments[coord] = Segment(Segment._image,
-                                               descriptor.segment_base,
-                                               descriptor.segment_length,
-                                               coord,
-                                               guard = True)
-        else:
-            assert image is not None and base is not None and length is not None
-            Segment._segments[coord] = Segment(image,
-                                               base,
-                                               length,
-                                               coord,
-                                               guard = True)
-        return Segment._segments[coord]
-    
+            assert descriptor.valid
+            assert descriptor.storage_associated
+            segment = Segment(Segment._image,
+                              descriptor.segment_base,
+                              descriptor.segment_length + 1,
+                              coord,
+                              descriptor,
+                              guard = True)
+            Segment._segments[coord] = segment
+            return segment
+
+        assert image is not None and base is not None and length is not None
+        print('making temp segment w/ incomplete information')
+        return Segment(image,
+                       base,
+                       length,
+                       coord,
+                       None,
+                       temp = True,
+                       guard = True)
+
+    def get_descriptor(self):
+        return self.descriptor
+        
     def get_base_addr(self):
         return self.base_addr
 
@@ -267,8 +289,9 @@ class Segment:
         return self.data.__getitem__(key)
 
 
-def parse_object_table(coord):
-    ot_segment = Segment.get_segment(coord)
+def parse_object_table(coord, ot_segment = None):
+    if ot_segment is None:
+        ot_segment = Segment.get_segment(coord)
     offset = 0
 
     header = parse_descriptor(ot_segment, offset)
@@ -284,34 +307,53 @@ def parse_object_table(coord):
                     isinstance(descriptor, FreeDescriptor))
         table.append(descriptor)
         index += 1
+
+    # XXX validate free descriptor chain
+
     return table
 
 def parse_object_table_hierarchy(image):
     global object_table
 
+    print('parsing object table directory')
     otd_descriptor = parse_descriptor(image, 8 + 32)
     assert isinstance(otd_descriptor, StorageDescriptor)
     otd_segment = Segment.get_segment(Coord(2, 2),
                                       image,
                                       otd_descriptor.segment_base,
-                                      otd_descriptor.segment_length)
-    object_table[2] = parse_object_table(Coord(2, 2))
+                                      otd_descriptor.segment_length + 1)
+    otd = parse_object_table(Coord(2, 2), ot_segment = otd_segment)
+    object_table[2] = otd
     
     # validate that descriptor points to object table directory
-    assert object_table[2][2].segment_base == 8
+    assert otd[2].segment_base == 8
 
-    for index in range(1, len(object_table[2])):
-        if index == 2:
-            continue
-        ot_descriptor = object_table[2][index]
+    for index in range(1, len(otd)):
+        ot_descriptor = otd[index]
         if index > 2 and isinstance(ot_descriptor, FreeDescriptor):
             continue
+        print('parsing object table %d' % index)
         assert isinstance(ot_descriptor, StorageDescriptor)
         object_table[index] = parse_object_table(Coord(2, index))
+        #if index == 1:
+        #   check that object table only contains processor access segments and free descriptors
+        #elif index == 2:
+        #   check that object table only contains object table data segments and free descriptors
+        #else:
+        #   check that object table contains no processor access segments or object table data segments
 
 
 def parse_image(image):
     parse_object_table_hierarchy(image)
+
+    for dir_index in range(1, len(object_table)):
+        for seg_index in range(1, len(object_table[dir_index])):
+            descriptor = object_table[dir_index][seg_index]
+            if isinstance(descriptor, StorageDescriptor):
+                seg = Segment.get_segment(Coord(dir_index, seg_index))
+            else:
+                print('object  %d/%d is' % (dir_index, seg_index), type(descriptor).__name__)
+            
 #    offset = 0
 #    while offset < len(image):
 #        l = parse_segment(image, offset)
