@@ -862,7 +862,6 @@ class Image(object):
     def compute_segment_sizes(self):
         # compute sizes of all segments
         for obj in self.object_by_name.values():
-            print(obj.name)
             if isinstance(obj, Segment):
                 obj.compute_size()
 
