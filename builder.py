@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
+from collections import OrderedDict
 import pprint
 import re
 import sys
@@ -64,8 +65,7 @@ class Field(object):
         else:
             #print("segment", self.segment.name, "allocating size", self.size_bits, "bits at bit offset", self.offset_bits)
             self.segment.allocation.allocate(size = self.size_bits,
-                                             pos = self.offset_bits,
-                                             fixed = True)
+                                             addr = self.offset_bits)
         self.allocated = True
 
     def compute_size(self):
@@ -445,8 +445,7 @@ class Object(object):
             else:
                 seg_table = self.image.object_by_coord[(2, self.dir_index)]
             if self.seg_index is None:
-                self.seg_index = seg_table.allocation.allocate(size=128,
-                                                               dry_run=True) // 128
+                self.seg_index = seg_table.allocation.find_free(size=128) // 128
             self.ote = self.create_object_descriptor(seg_table)
             self.ote.allocate()
             assert self.seg_index == self.ote.offset_bits // 128
@@ -619,7 +618,7 @@ class Segment(Object):
                 field.allocate()
 
         try:
-            self.size_bits = max(self.allocation.highest_allocated() + 1,
+            self.size_bits = max(self.allocation.last_free_range(),
                                  self.min_size_bits,
                                  self.abs_min_size_bits())
         except Exception as e:
@@ -638,14 +637,13 @@ class Segment(Object):
         rounded_size_with_prefix = 64 + self.size_bits
         if rounded_size_with_prefix % 64 != 0:
             rounded_size_with_prefix += 64 - (rounded_size_with_prefix % 64)
-        #print("segment %s orig size %d rounded with prefix %d" % (self.name, self.size_bits, rounded_size_with_prefix))
+        #print("segment %s coord (%d, %d): orig size %d rounded with prefix %d" % (self.name, self.dir_index, self.seg_index, self.size_bits, rounded_size_with_prefix))
         if self.phys_addr is None:
             self.phys_addr = self.image.phys_mem_allocation.allocate(size = rounded_size_with_prefix // 8)
         else:
             # segment is at specified address
             self.image.phys_mem_allocation.allocate(size = rounded_size_with_prefix // 8,
-                                                    pos = self.phys_addr - 8,
-                                                    fixed = True)
+                                                    addr = self.phys_addr - 8)
         #print("segment %s coord (%d, %d): phys addr %06x, size %d" % (self.name, self.dir_index, self.seg_index, self.phys_addr, self.size_bits))
         self.phys_allocated = True
 
@@ -759,7 +757,7 @@ class SegmentTable(DataSegment):
         prev_descriptor = self.object_table_header
         free_descriptor_count = 0
         index = 0
-        while self.allocation.discontiguous() or free_descriptor_count < self.min_free_descriptors:
+        while (not self.allocation.contiguous_from_zero()) or free_descriptor_count < self.min_free_descriptors:
             free_descriptor = FreeDescriptor(self)
             free_descriptor.allocate()
             index = free_descriptor.offset_bits // 128
@@ -834,7 +832,13 @@ class Image(object):
         image_root = image_tree.getroot()
         assert image_root.tag == 'image'
         self.object_by_coord = { }
-        self.object_by_name = { }
+
+        self.object_by_name = OrderedDict()
+        # Using OrderedDict here to get deterministic enumeration
+        # of the dictionary. This program should produce correct output
+        # regardless of the enumeration order, but forcing determinism
+        # is advantageous for regression testing.
+
         self.segment_table_directory = None
         self.phys_mem_allocation = Allocation(1 << 24, "phys mem")
         self.phys_mem = bytearray(1 << 24)
@@ -847,21 +851,18 @@ class Image(object):
 
     def assign_coordinates(self):
         # assign coordinates to all segment tables
-        # XXX would be nice to process in order they're declared,
-        #     which would require adding a list
         for obj in self.object_by_name.values():
             if isinstance(obj, SegmentTable):
                 obj.assign_coordinates()
 
         # assign coordinates to all other objects
-        # XXX would be nice to process in order they're declared,
-        #     which would require adding a list
         for obj in self.object_by_name.values():
             obj.assign_coordinates()
 
     def compute_segment_sizes(self):
         # compute sizes of all segments
         for obj in self.object_by_name.values():
+            print(obj.name)
             if isinstance(obj, Segment):
                 obj.compute_size()
 
@@ -888,7 +889,7 @@ class Image(object):
                 obj.write_to_image()
 
     def get_size(self):
-        self.size = self.phys_mem_allocation.highest_allocated() + 1
+        self.size = self.phys_mem_allocation.last_free_range()
         return self.size
 
     def write_to_file(self, f):
