@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Intel iAPX 432 image decoder
 
-# Copyright 2016 Eric Smith <spacewar@gmail.com>
+# Copyright 2016, 2017 Eric Smith <spacewar@gmail.com>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of version 3 of the GNU General Public License
@@ -233,11 +233,11 @@ class Segment:
         if l2 % 8 != 0:
             l2 += 8 - (l2 % 8)
 
-        #assert not Segment._mem_map[base-8:base+12].any()
-        if Segment._mem_map[base-8:base+12].any():
+        #assert not Segment._mem_map[base-8:base+l2].any()
+        if Segment._mem_map[base-8:base+l2].any():
             print ('segment overlap!')
 
-        print('segment %d/%d at %06x..%06x' % (coord.dir_index, coord.seg_index, base-8, base+length))
+        print('segment %d/%d at %06x %06x..%06x' % (coord.dir_index, coord.seg_index, base-8, base, base+length-1))
         if not temp:
             Segment._mem_map[base-8:base+l2] = True
         self.data = image[base:base+length]
