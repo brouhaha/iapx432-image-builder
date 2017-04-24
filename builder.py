@@ -628,23 +628,32 @@ class Segment(Object):
                   self.abs_min_size_bits())
         return self.size_bits
 
-    def allocate_physical_memory(self):
+    def allocate_physical_memory(self, debug = False):
         if self.phys_allocated:
             return
         assert self.size_bits is not None
         # allow 8 bytes for segment prefix, below the phys addr
         # and round up size to a multiple of 8
-        rounded_size_with_prefix = 64 + self.size_bits
-        if rounded_size_with_prefix % 64 != 0:
-            rounded_size_with_prefix += 64 - (rounded_size_with_prefix % 64)
-        #print("segment %s coord (%d, %d): orig size %d rounded with prefix %d" % (self.name, self.dir_index, self.seg_index, self.size_bits, rounded_size_with_prefix))
+        size_bits_rounded_with_prefix = 64 + self.size_bits
+        if size_bits_rounded_with_prefix % 64 != 0:
+            size_bits_rounded_with_prefix += 64 - (size_bits_rounded_with_prefix % 64)
+        #print("segment %s coord (%d, %d): orig size %d rounded with prefix %d" % (self.name, self.dir_index, self.seg_index, self.size_bits, size_bits_rounded_with_prefix))
+        size_bytes_with_prefix = size_bits_rounded_with_prefix // 8
+        if debug:
+            print('size %d bits, size_bits_rounded_with_prefix %d bits, size_bytes_with_prefix %d' % (self.size_bits, size_bits_rounded_with_prefix, size_bytes_with_prefix))
         if self.phys_addr is None:
-            self.phys_addr = self.image.phys_mem_allocation.allocate(size = rounded_size_with_prefix // 8 + 8) + 8
+            self.phys_addr = self.image.phys_mem_allocation.allocate(size = size_bytes_with_prefix) + 8
         else:
             # segment is at specified address
-            self.image.phys_mem_allocation.allocate(size = rounded_size_with_prefix // 8,
-                                                    addr = self.phys_addr - 8)
+            if debug:
+                print('phys_addr requested %08x' % (self.phys_addr,))
+            pa = self.image.phys_mem_allocation.allocate(size = size_bytes_with_prefix,
+                                                         addr = self.phys_addr - 8)
+            if debug:
+                print('phys_addr allocated %08x' % (pa,))
         #print("segment %s coord (%d, %d): phys addr %06x, size %d" % (self.name, self.dir_index, self.seg_index, self.phys_addr, self.size_bits))
+        if debug:
+            self.image.phys_mem_allocation._dump()
         self.phys_allocated = True
 
 
@@ -954,7 +963,7 @@ if __name__ == '__main__':
                 object_by_addr[o.phys_addr] = o
             for k in sorted(object_by_addr):
                 d = object_by_addr[k]
-                print("%06x %06x..%06x %5d (%d/%d) %s" % (d.phys_addr - 8, d.phys_addr, d.phys_addr + d.size_bits // 8 - 1, d.size_bits // 8, d.dir_index, d.seg_index, d.name))
+                print("%06x %06x..%06x %5d (%2d/%2d) %s" % (d.phys_addr - 8, d.phys_addr, d.phys_addr + d.size_bits // 8 - 1, d.size_bits // 8, d.dir_index, d.seg_index, d.name))
         else:
             for k in sorted(image.object_by_coord.keys()):
                 d = image.object_by_coord[k]
