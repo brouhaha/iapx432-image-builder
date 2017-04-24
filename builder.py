@@ -902,7 +902,66 @@ class Image(object):
 
     def write_to_file(self, f):
         f.write(self.phys_mem[0:self.size])
-    
+
+    def reachability_check(self):
+        # mark all segments not reachable
+        # for all object tables pointed to by object table directory
+        #   mark object tables reachable
+        # iterate over processor access segments:
+        #   mark processor access segment reachable
+        #   add processsor access segment to trace queue
+        # while trace queue is not empty:
+        #   pull an access segment from trace queue
+        #   for each AD in access segment:
+        #     if AD points to a segment not previously reachable:
+        #       mark the segment reachable
+        #       if the segment is an access segment:
+        #         push segmetn onto trace queue
+        # iterate over all segments:
+        #   if segment is not marked reachable:
+        #     report unreachable segment
+
+        trace_queue = []
+
+        for obj in self.object_by_name.values():
+            obj.reachable = False
+            if obj.dir_index == 1:
+                assert isinstance(obj, AccessSegment)
+                assert obj.system_type == arch.get_enumeration_value('system_type', 'processor')['value']
+                trace_queue.append(obj)
+
+        otd = self.object_by_coord[(2, 2)]
+        assert isinstance(otd, DataSegment)
+        assert otd.system_type == arch.get_enumeration_value('system_type', 'object_table')['value']
+        for ote in otd.fields:
+            if isinstance(ote, StorageDescriptor):
+                seg_index = ote.offset_bits // 128
+                ot = self.object_by_coord[(2, seg_index)]
+                assert isinstance(ot, DataSegment)
+                assert ot.system_type == arch.get_enumeration_value('system_type', 'object_table')['value']
+                ot.reachable = True
+                
+        while len(trace_queue):
+            obj = trace_queue.pop()
+            assert isinstance(obj, AccessSegment)
+            for ad in obj.fields:
+                assert isinstance(ad, AD)
+                if not ad.valid:
+                    continue
+                ad_seg = self.object_by_coord[(ad.dir_index, ad.seg_index)]
+                if ad_seg.reachable:
+                    continue
+                ad_seg.reachable = True
+                if isinstance(ad_seg, AccessSegment):
+                    trace_queue.append(ad_seg)
+        for obj in self.object_by_name.values():
+            if not obj.reachable:
+                print('segment not reachable: (%d, %d) %s' % (obj.dir_index,
+                                                              obj.seg_index,
+                                                              obj.name))
+        else:
+            print('all objects reachable')
+                
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser(description='iAPX 432 Image Builder')
@@ -949,14 +1008,17 @@ if __name__ == '__main__':
     image_size = image.get_size()
     print("image size %d (0x%06x)" % (image_size, image_size))
 
-    print("writing image to output file")
-    image.write_to_file(args.image_binary[0])
-    
-
     print('%d objects in image' % len(image.object_by_coord))
+
+    for obj in image.object_by_name.values():
+        if obj.dir_index != 2 and obj.reference_count == 0:
+            print("no AD references", obj.name)
+
+    image.reachability_check()
 
     if args.list_segments:
         if True:
+            # list segments in address order
             object_by_addr = {}
             for k in image.object_by_name:
                 o = image.object_by_name[k]
@@ -965,11 +1027,12 @@ if __name__ == '__main__':
                 d = object_by_addr[k]
                 print("%06x %06x..%06x %5d (%2d/%2d) %s" % (d.phys_addr - 8, d.phys_addr, d.phys_addr + d.size_bits // 8 - 1, d.size_bits // 8, d.dir_index, d.seg_index, d.name))
         else:
+            # list segments in coordinate order
             for k in sorted(image.object_by_coord.keys()):
                 d = image.object_by_coord[k]
                 print("%06x..%06x" % (d.phys_addr, d.phys_addr + d.size_bits // 8 - 1), k, d.name)
 
-    for obj in image.object_by_name.values():
-        if obj.dir_index != 2 and obj.reference_count == 0:
-            print("no AD references", obj.name)
+    print("writing image to output file")
+    image.write_to_file(args.image_binary[0])
+    
 
