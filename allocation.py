@@ -240,7 +240,7 @@ class Allocation:
                     print('splitting block at beginning')
                 self._split_free_block(b.addr, addr - b.addr)
                 if debug:
-                    self.dump()
+                    self._dump()
                 continue
 
             if size < b.size:
@@ -249,7 +249,7 @@ class Allocation:
                     print('splitting block at end')
                 self._split_free_block(b.addr, size)
                 if debug:
-                    self.dump()
+                    self._dump()
                 continue
 
             # we now have exact match, change block from free to allocated
