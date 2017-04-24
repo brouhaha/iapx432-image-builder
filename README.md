@@ -54,13 +54,21 @@ iapx432-image-builder is under development, but is incomplete and
 untested.  It is NOT at this time expected to yield valid executable
 images.
 
+## Required libraries
+
+In addition to Python 3.5 or later, and its standard libraries,
+iapx432-image-builder requires two additional Python libraries:
+
+* [attrs](https://pypi.python.org/pypi/attrs)
+* [sortedcontainers](https://pypi.python.org/pypi/sortedcontainers)
+
 ## Usage
 
 The iapx432-image-builder is invoked from the command line,
 providing arguments for the image description XML input file,
 and the binary image output file:
 
-* `builder image.xml image.bin`
+* `builder.py image.xml image.bin`
 
 ## License information
 
