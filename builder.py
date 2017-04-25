@@ -904,25 +904,12 @@ class Image(object):
         f.write(self.phys_mem[0:self.size])
 
     def reachability_check(self):
-        # mark all segments not reachable
-        # for all object tables pointed to by object table directory
-        #   mark object tables reachable
-        # iterate over processor access segments:
-        #   mark processor access segment reachable
-        #   add processsor access segment to trace queue
-        # while trace queue is not empty:
-        #   pull an access segment from trace queue
-        #   for each AD in access segment:
-        #     if AD points to a segment not previously reachable:
-        #       mark the segment reachable
-        #       if the segment is an access segment:
-        #         push segmetn onto trace queue
-        # iterate over all segments:
-        #   if segment is not marked reachable:
-        #     report unreachable segment
-
         trace_queue = []
 
+        # iterate over all segments:
+        #   mark segment as not reachable
+        #   if segment is a Processor Access Segment:
+        #     append segment to trace queue
         for obj in self.object_by_name.values():
             obj.reachable = False
             if obj.dir_index == 1:
@@ -930,6 +917,8 @@ class Image(object):
                 assert obj.system_type == arch.get_enumeration_value('system_type', 'processor')['value']
                 trace_queue.append(obj)
 
+        # for all object tables pointed to by object table directory
+        #   mark object tables reachable
         otd = self.object_by_coord[(2, 2)]
         assert isinstance(otd, DataSegment)
         assert otd.system_type == arch.get_enumeration_value('system_type', 'object_table')['value']
@@ -941,6 +930,13 @@ class Image(object):
                 assert ot.system_type == arch.get_enumeration_value('system_type', 'object_table')['value']
                 ot.reachable = True
                 
+        # while trace queue is not empty:
+        #   pull an access segment from trace queue
+        #   for each AD in access segment:
+        #     if AD points to a segment not previously reachable:
+        #       mark the segment reachable
+        #       if the segment is an access segment:
+        #         append segment to trace queue
         while len(trace_queue):
             obj = trace_queue.pop()
             assert isinstance(obj, AccessSegment)
@@ -954,6 +950,10 @@ class Image(object):
                 ad_seg.reachable = True
                 if isinstance(ad_seg, AccessSegment):
                     trace_queue.append(ad_seg)
+
+        # iterate over all segments:
+        #   if segment is not marked reachable:
+        #     report unreachable segment
         for obj in self.object_by_name.values():
             if not obj.reachable:
                 print('segment not reachable: (%d, %d) %s' % (obj.dir_index,
