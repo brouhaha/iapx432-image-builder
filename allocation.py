@@ -162,6 +162,10 @@ class Allocation:
 	address returned by find_free().
         """
 
+        if size < 0:
+            raise ValueError('requested size is negative')
+        if size > self._size:
+            raise ValueError('requested size is larger than address space')
         if addr is not None:
             if addr < 0:
                 raise ValueError('requested address is negative')
@@ -170,13 +174,11 @@ class Allocation:
 
             b = self._find_block(addr)
             assert addr >= b.addr
-            return b.free and addr + size <= b.addr + b.size
+            if b.free and addr + size <= b.addr + b.size:
+                return addr
+            else:
+                raise AllocationError('requested address range unavailable')
 
-        if size < 0:
-            raise ValueError('requested size is negative')
-        if size > self._size:
-            raise ValueError('requested size is larger than address space')
-        
         second_pass = False
         while True:
             if self._policy == AllocationPolicy.ROTATING_FIRST_FIT:
@@ -196,6 +198,24 @@ class Allocation:
                 second_pass = True
                 continue
         return addr
+
+
+    def is_available(self, addr: int, size: int) -> bool:
+        """
+        Determines whether a specified address range is free.
+
+        Args:
+            addr:   The start address of the address range
+            size:   The size of the address range
+
+        Returns:
+            True if the specified address range is free.
+        """
+        try:
+            free_addr = self.find_free(addr = addr, size = size)
+            return free_addr == addr
+        except AllocationError:
+            return False
 
 
     def allocate(self, size: int, data = None, addr: int = None) -> int:
