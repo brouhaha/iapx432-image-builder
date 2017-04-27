@@ -21,6 +21,7 @@ from bitarray import bitarray
 import xml.etree.ElementTree
 from collections import OrderedDict
 
+from allocation import Allocation
 from arch import Arch
 
 
@@ -209,7 +210,7 @@ object_table = { }
 class Segment:
     _image = None
     _segments = { }
-    _mem_map = bitarray(1<<24)
+    _phys_mem_allocation = Allocation(1 << 24, "phys mem")
 
     # Do not construct a Segment directly! Use the get_segment() method.
     def __init__(self, image, base, length, coord, descriptor, temp = False, guard = False):
@@ -233,13 +234,16 @@ class Segment:
         if l2 % 8 != 0:
             l2 += 8 - (l2 % 8)
 
-        #assert not Segment._mem_map[base-8:base+l2].any()
-        if Segment._mem_map[base-8:base+l2].any():
+        # assert not Segment._phys_mem_allocation.is_available(base - 8, l2)
+        #Segment._phys_mem_allocation._dump()
+        if not Segment._phys_mem_allocation.is_available(base - 8, l2):
             print ('segment overlap!')
 
         print('segment %d/%d at %06x %06x..%06x' % (coord.dir_index, coord.seg_index, base-8, base, base+length-1))
         if not temp:
-            Segment._mem_map[base-8:base+l2] = True
+            Segment._phys_mem_allocation.allocate(addr = base - 8,
+                                                  size = l2,
+                                                  data = self)
         self.data = image[base:base+length]
 
     @classmethod
@@ -264,7 +268,7 @@ class Segment:
             return segment
 
         assert image is not None and base is not None and length is not None
-        print('making temp segment w/ incomplete information')
+        #print('making temp segment w/ incomplete information')
         return Segment(image,
                        base,
                        length,
@@ -311,6 +315,7 @@ def parse_object_table(coord, ot_segment = None):
     # XXX validate free descriptor chain
 
     return table
+
 
 def parse_object_table_hierarchy(image):
     global object_table
